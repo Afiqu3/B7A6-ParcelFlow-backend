@@ -1,0 +1,25 @@
+model User {
+    id                 String        @id @default(uuid())
+    name               String
+    email              String        @unique
+    password           String?
+    googleId           String?       @unique
+    authProvider       AuthProvider  @default(CREDENTIAL)
+    role               Role          @default(MERCHANT)
+    status             AccountStatus @default(ACTIVE)
+    emailVerified      Boolean       @default(false)
+    mustChangePassword Boolean       @default(false)
+    imageUrl           String        @default("")
+    imagePublicId      String        @default("")
+    isDeleted          Boolean       @default(false)
+    deletedAt          DateTime?
+    createdAt          DateTime      @default(now())
+    updatedAt          DateTime      @updatedAt
+
+    merchantProfile MerchantProfile?
+    // riderProfile    RiderProfile?
+    // adminProfile    AdminProfile?
+
+    @@index([role, status])
+    @@map("users")
+}

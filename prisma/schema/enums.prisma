@@ -1,0 +1,16 @@
+enum Role {
+    SUPER_ADMIN
+    ADMIN
+    MERCHANT
+    RIDER
+}
+
+enum AccountStatus {
+    ACTIVE
+    BLOCKED
+}
+
+enum AuthProvider {
+    GOOGLE
+    CREDENTIAL
+}
