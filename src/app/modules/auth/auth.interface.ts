@@ -29,3 +29,7 @@ export interface IRequestUser {
 	name: string;
 	role: Role;
 }
+
+export interface IGoogleLoginPayload {
+	idToken: string;
+}

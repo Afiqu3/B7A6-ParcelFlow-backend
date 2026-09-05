@@ -30,4 +30,8 @@ router.get(
 	AuthController.getMe,
 );
 
+router.post("/refresh", AuthController.refreshToken);
+
+router.post("/google", AuthController.googleLogin);
+
 export const AuthRoutes = router;
