@@ -47,6 +47,7 @@ const registerMerchant = async (payload: IRegisterMerchantPayload) => {
 	);
 
 	const expirationSeconds = 5 * 60;
+	const expirationSecondsForData = 20 * 60;
 
 	const otpKey = `merchant-registration-otp:${email}`;
 	const otpValue = crypto.randomInt(100000, 1000000).toString();
@@ -73,7 +74,7 @@ const registerMerchant = async (payload: IRegisterMerchantPayload) => {
 		{
 			expiration: {
 				type: "EX",
-				value: expirationSeconds,
+				value: expirationSecondsForData,
 			},
 		},
 	);
@@ -587,7 +588,7 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 		throw new AppError(httpStatus.CONFLICT, "User Has Account With Google");
 	}
 
-	const key = `reset-password-otp:${isUserExist.email}`;
+	const key = `forgot-password-otp:${isUserExist.email}`;
 	const redisOtp = await redisClient.get(key);
 
 	if (!redisOtp) {
@@ -633,6 +634,54 @@ const resetPassword = async (payload: IResetPasswordPayload) => {
 	});
 };
 
+const resendOtpForRegistration = async (email: string) => {
+	const merchantRegistrationKey = `merchant-registration-data:${email}`;
+	const redisMerchantData = await redisClient.get(merchantRegistrationKey);
+
+	if (!redisMerchantData) {
+		throw new AppError(
+			httpStatus.NOT_FOUND,
+			"You limitation for resend OTP has expired. Please register again.",
+		);
+	}
+	const merchantPayload: IRegisterMerchantPayload =
+		JSON.parse(redisMerchantData);
+
+	const expirationSeconds = 5 * 60;
+	const otpKey = `merchant-registration-otp:${email}`;
+	const otpValue = crypto.randomInt(100000, 1000000).toString();
+
+	await redisClient.del(otpKey);
+
+	await redisClient.set(otpKey, otpValue, {
+		expiration: {
+			type: "EX",
+			value: expirationSeconds,
+		},
+	});
+
+	const templatePath = path.join(
+		process.cwd(),
+		"src/app/templates/registration-user-otp.ejs",
+	);
+
+	const templateData = {
+		name: merchantPayload.name,
+		email,
+		otp: otpValue,
+		expirationMinutes: expirationSeconds / 60,
+	};
+
+	const html = await ejs.renderFile(templatePath, templateData);
+
+	await transporter.sendMail({
+		from: '"ParcelFlow" <noreply@parcelflow.com>',
+		to: email,
+		subject: "Email Verification",
+		html,
+	});
+};
+
 export const AuthService = {
 	registerMerchant,
 	verifyMerchantEmail,
@@ -642,4 +691,5 @@ export const AuthService = {
 	googleLogin,
 	forgotPassword,
 	resetPassword,
+	resendOtpForRegistration,
 };

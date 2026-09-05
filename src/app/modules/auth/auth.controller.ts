@@ -186,6 +186,42 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const resendOtpForRegistration = catchAsync(
+	async (req: Request, res: Response) => {
+		const email = req.body.email;
+
+		await AuthService.resendOtpForRegistration(email);
+
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: `OTP Resent To Email : ${email}`,
+			data: null,
+		});
+	},
+);
+
+const logout = catchAsync(async (req: Request, res: Response) => {
+	res.clearCookie("accessToken", {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+	});
+
+	res.clearCookie("refreshToken", {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+	});
+
+	sendResponse(res, {
+		success: true,
+		statusCode: httpStatus.OK,
+		message: "Logged out successfully",
+		data: null,
+	});
+});
+
 export const AuthController = {
 	registerMerchant,
 	verifyMerchantEmail,
@@ -195,4 +231,6 @@ export const AuthController = {
 	googleLogin,
 	forgotPassword,
 	resetPassword,
+	resendOtpForRegistration,
+	logout,
 };

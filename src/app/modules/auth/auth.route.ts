@@ -24,6 +24,7 @@ router.post(
 	validateRequest(UserValidation.LoginZodSchema),
 	AuthController.loginUser,
 );
+
 router.get(
 	"/me",
 	auth(Role.ADMIN, Role.RIDER, Role.MERCHANT, Role.SUPER_ADMIN),
@@ -33,6 +34,8 @@ router.get(
 router.post("/refresh", AuthController.refreshToken);
 
 router.post("/google", AuthController.googleLogin);
+
+router.post("/logout", AuthController.logout);
 
 router.post(
 	"/forgot-password",
@@ -44,6 +47,12 @@ router.post(
 	"/reset-password",
 	validateRequest(UserValidation.ResetPasswordZodSchema),
 	AuthController.resetPassword,
+);
+
+router.post(
+	"/resend-otp",
+	validateRequest(UserValidation.ForgotPasswordZodSchema),
+	AuthController.resendOtpForRegistration,
 );
 
 export const AuthRoutes = router;
