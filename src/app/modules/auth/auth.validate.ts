@@ -65,10 +65,36 @@ const ResetPasswordZodSchema = z.object({
 	otp: z.string().length(6),
 });
 
+const ChangePasswordZodSchema = z.object({
+	currentPassword: z
+		.string()
+		.min(8, "Password Must Minimum 8 Characters Long.")
+		.regex(/[a-z]/, "Password must contain at least 1 Lowercase Letter")
+		.regex(/[A-Z]/, "Password must contain at least 1 Uppercase Letter")
+
+		.regex(/[0-9]/, "Password must contain at least 1 Number")
+		.regex(
+			/[^A-Za-z0-9]/,
+			"Password must contain at least 1 Special Character",
+		),
+	newPassword: z
+		.string()
+		.min(8, "Password Must Minimum 8 Characters Long.")
+		.regex(/[a-z]/, "Password must contain at least 1 Lowercase Letter")
+		.regex(/[A-Z]/, "Password must contain at least 1 Uppercase Letter")
+
+		.regex(/[0-9]/, "Password must contain at least 1 Number")
+		.regex(
+			/[^A-Za-z0-9]/,
+			"Password must contain at least 1 Special Character",
+		),
+});
+
 export const UserValidation = {
 	MerchantRegistrationZodSchema,
 	MerchantEmailVerifyZodSchema,
 	LoginZodSchema,
 	ForgotPasswordZodSchema,
 	ResetPasswordZodSchema,
+	ChangePasswordZodSchema,
 };

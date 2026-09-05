@@ -18,6 +18,7 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import { jwtUtils } from "../../utils/jwt";
 import type {
+	IChangePasswordPayload,
 	IForgotPasswordPayload,
 	IGoogleLoginPayload,
 	ILoginUserPayload,
@@ -682,6 +683,56 @@ const resendOtpForRegistration = async (email: string) => {
 	});
 };
 
+const changePassword = async (
+	payload: IChangePasswordPayload,
+	userId: string,
+) => {
+	const user = await prisma.user.findUnique({
+		where: {
+			id: userId,
+		},
+	});
+
+	if (!user) {
+		throw new AppError(httpStatus.NOT_FOUND, "User not found");
+	}
+
+	if (user.status === AccountStatus.BLOCKED) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is blocked");
+	}
+
+	if (user?.isDeleted) {
+		throw new AppError(httpStatus.FORBIDDEN, "User is Deleted");
+	}
+
+	const isPasswordMatched = await bcrypt.compare(
+		payload.currentPassword,
+		user.password as string,
+	);
+
+	if (!isPasswordMatched) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "Invalid credentials");
+	}
+
+	const updatedUser = await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			password: await bcrypt.hash(
+				payload.newPassword,
+				Number(config.bcrypt_salt_rounds),
+			),
+			mustChangePassword: false,
+		},
+		omit: {
+			password: true,
+		},
+	});
+
+	return updatedUser;
+};
+
 export const AuthService = {
 	registerMerchant,
 	verifyMerchantEmail,
@@ -692,4 +743,5 @@ export const AuthService = {
 	forgotPassword,
 	resetPassword,
 	resendOtpForRegistration,
+	changePassword,
 };

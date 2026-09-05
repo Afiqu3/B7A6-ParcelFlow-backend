@@ -222,6 +222,27 @@ const logout = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const changePassword = catchAsync(async (req: Request, res: Response) => {
+	const payload = req.body;
+	const userId = req.user?.userId;
+
+	if (!userId) {
+		throw new AppError(
+			httpStatus.UNAUTHORIZED,
+			"User information is missing in the request",
+		);
+	}
+
+	const updatedUser = await AuthService.changePassword(payload, userId);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Password Changed Successfully",
+		data: updatedUser,
+	});
+});
+
 export const AuthController = {
 	registerMerchant,
 	verifyMerchantEmail,
@@ -233,4 +254,5 @@ export const AuthController = {
 	resetPassword,
 	resendOtpForRegistration,
 	logout,
+	changePassword,
 };
