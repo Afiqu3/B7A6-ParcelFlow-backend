@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to ParcelFlow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #EEF2F7;
+            font-family: 'Inter', Arial, sans-serif;
+            color: #1A2340;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrapper {
+            max-width: 560px;
+            margin: 48px auto;
+            padding: 0 16px 48px;
+        }
+
+        .header {
+            background: #0F2057;
+            border-radius: 12px 12px 0 0;
+            padding: 28px 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: #3B82F6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-mark svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+        }
+
+        .logo-text {
+            font-family: 'Sora', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+
+        .logo-text span {
+            color: #60A5FA;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1A3A8F 0%, #0F2057 60%, #0A1640 100%);
+            padding: 44px 40px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 180px;
+            height: 180px;
+            background: rgba(59, 130, 246, 0.12);
+            border-radius: 50%;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            width: 130px;
+            height: 130px;
+            background: rgba(96, 165, 250, 0.08);
+            border-radius: 50%;
+        }
+
+        .hero-icon {
+            width: 68px;
+            height: 68px;
+            background: rgba(59, 130, 246, 0.18);
+            border: 2px solid rgba(96, 165, 250, 0.35);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: #60A5FA;
+        }
+
+        .hero-title {
+            font-family: 'Sora', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-sub {
+            font-size: 14px;
+            color: #93B8F5;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 40px 40px 36px;
+        }
+
+        .greeting {
+            font-family: 'Sora', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #0F2057;
+            margin-bottom: 12px;
+        }
+
+        .intro {
+            font-size: 14.5px;
+            line-height: 1.7;
+            color: #4A5578;
+            margin-bottom: 32px;
+        }
+
+        .features-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #8A94B2;
+            margin-bottom: 16px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .feature-item {
+            background: #F8FAFF;
+            border: 1px solid #E4ECFF;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .feature-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .feature-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .fi-blue {
+            background: #EBF2FF;
+        }
+
+        .fi-blue svg {
+            fill: #3B82F6;
+        }
+
+        .fi-green {
+            background: #EDFAF4;
+        }
+
+        .fi-green svg {
+            fill: #10B981;
+        }
+
+        .fi-amber {
+            background: #FFF7EA;
+        }
+
+        .fi-amber svg {
+            fill: #F59E0B;
+        }
+
+        .fi-purple {
+            background: #F3EEFF;
+        }
+
+        .fi-purple svg {
+            fill: #8B5CF6;
+        }
+
+        .feature-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #1A2340;
+            margin-bottom: 2px;
+        }
+
+        .feature-desc {
+            font-size: 11.5px;
+            color: #8A94B2;
+            line-height: 1.5;
+        }
+
+        .cta-wrap {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            background: #0F2057;
+            color: #ffffff !important;
+            font-family: 'Sora', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 14px 36px;
+            border-radius: 8px;
+            letter-spacing: 0.2px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #E8EDF5;
+            margin: 0 0 28px;
+        }
+
+        .support-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            background: #F0F5FF;
+            border: 1px solid #D4E3FF;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .support-icon {
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .support-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #3A4D7A;
+        }
+
+        .support-text strong {
+            display: block;
+            font-weight: 600;
+            color: #0F2057;
+            margin-bottom: 2px;
+        }
+
+        .support-text a {
+            color: #3B82F6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer {
+            background: #F5F7FC;
+            border-radius: 0 0 12px 12px;
+            padding: 24px 40px;
+            border-top: 1px solid #E2E8F5;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: #8A94B2;
+            line-height: 1.7;
+        }
+
+        .footer-brand {
+            font-weight: 600;
+            color: #0F2057;
+        }
+
+        @media (max-width: 480px) {
+            .wrapper {
+                margin: 16px auto;
+            }
+
+            .header,
+            .card,
+            .footer {
+                padding-left: 24px;
+                padding-right: 24px;
+            }
+
+            .hero {
+                padding: 32px 24px;
+            }
+
+            .hero-title {
+                font-size: 21px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-mark">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zm-1.5 1.5L20.46 12H17V9.5h1.5zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zm9.78 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+                </svg>
+            </div>
+            <span class="logo-text">Parcel<span>Flow</span></span>
+        </div>
+
+        <!-- Hero -->
+        <div class="hero">
+            <div class="hero-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+            </div>
+            <h1 class="hero-title">You're officially verified! 🎉</h1>
+            <p class="hero-sub">
+                Your merchant account is active and ready to go.<br />
+                Start managing deliveries with ParcelFlow today.
+            </p>
+        </div>
+
+        <!-- Card -->
+        <div class="card">
+            <p class="greeting">Welcome aboard, <%= name %>!</p>
+            <p class="intro">
+                We're thrilled to have you as a ParcelFlow merchant. Your account has been
+                verified and is fully set up. You now have everything you need to start
+                booking parcels, tracking shipments, and managing your deliveries — all in one place.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">
+                © <%= new Date().getFullYear() %> <span class="footer-brand">ParcelFlow</span>. All rights
+                    reserved.<br />
+                    Connecting merchants and riders across Bangladesh.<br />
+                    <a href="https://parcelflow.com/unsubscribe"
+                        style="color:#8A94B2; text-decoration:underline;">Unsubscribe</a>
+                    &nbsp;·&nbsp;
+                    <a href="https://parcelflow.com/privacy" style="color:#8A94B2; text-decoration:underline;">Privacy
+                        Policy</a>
+            </p>
+        </div>
+
+    </div>
+</body>
+
+</html>

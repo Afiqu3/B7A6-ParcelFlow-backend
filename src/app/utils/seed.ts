@@ -109,27 +109,27 @@ export const seedTesterAdmin = async () => {
 	}
 };
 
-export const seedTesterMerchant = async () => {
+export const seedTesterRider = async () => {
 	try {
-		const isTesterMerchantExist = await prisma.user.findUnique({
+		const isTesterRiderExist = await prisma.user.findUnique({
 			where: {
-				email: config.tester_merchant_email,
+				email: config.tester_rider_email,
 			},
 		});
 
-		if (isTesterMerchantExist) {
-			console.log("Tester Merchant Already Exists!");
+		if (isTesterRiderExist) {
+			console.log("Tester Rider Already Exists!");
 			return;
 		}
 
-		const name = config.tester_merchant_name;
-		const email = config.tester_merchant_email;
+		const name = config.tester_rider_name;
+		const email = config.tester_rider_email;
 		const password = config.tester_admin_password;
 
 		if (!name || !email || !password) {
 			throw new AppError(
 				httpStatus.INTERNAL_SERVER_ERROR,
-				"Tester Merchant Name , Email, Password Missing In Env File!!!",
+				"Tester Rider Name , Email, Password Missing In Env File!!!",
 			);
 		}
 
@@ -138,31 +138,31 @@ export const seedTesterMerchant = async () => {
 			Number(config.bcrypt_salt_rounds),
 		);
 
-		const testerMerchant = await prisma.user.create({
+		const testerRider = await prisma.user.create({
 			data: {
 				name,
 				email,
 				password: hashedPassword,
-				role: Role.MERCHANT,
+				role: Role.RIDER,
 				mustChangePassword: false,
 				emailVerified: true,
-				merchantProfile: {
-					create: {
-						email,
-						name,
-						phone: "01712345678",
-					},
-				},
+				// merchantProfile: {
+				// 	create: {
+				// 		email,
+				// 		name,
+				// 		phone: "01712345678",
+				// 	},
+				// },
 			},
 		});
 
-		console.log("Tester Merchant Created : ", testerMerchant);
+		console.log("Tester Rider Created : ", testerRider);
 	} catch (error) {
-		console.log("Error Seeding Tester Merchant : ", error);
+		console.log("Error Seeding Tester Rider : ", error);
 
 		await prisma.user.delete({
 			where: {
-				email: config.tester_merchant_email,
+				email: config.tester_rider_email,
 			},
 		});
 	}
