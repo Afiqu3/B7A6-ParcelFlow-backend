@@ -11,6 +11,7 @@ import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AuthRoutes } from "./app/modules/auth/auth.route";
 import { UserRoutes } from "./app/modules/user/user.route";
+import { AdminRoutes } from "./app/modules/admin/admin.route";
 
 const app: Application = express();
 
@@ -30,6 +31,7 @@ app.use(cookieParser());
 
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
+app.use("/api/v1/admin", AdminRoutes);
 
 // app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
 //     try {
