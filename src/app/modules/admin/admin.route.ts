@@ -14,11 +14,23 @@ router.post(
 	AdminController.createAdmin,
 );
 
+router.get(
+	"/",
+	auth(Role.SUPER_ADMIN, Role.ADMIN),
+	AdminController.getAllAdmin,
+);
+
 router.post(
 	"/super-admin",
 	auth(Role.SUPER_ADMIN),
 	validateRequest(AdminValidation.CreateAdminZodSchema),
 	AdminController.createAdmin,
+);
+
+router.get(
+	"/super-admin",
+	auth(Role.SUPER_ADMIN),
+	AdminController.getAllSuperAdmin,
 );
 
 export const AdminRoutes = router;
