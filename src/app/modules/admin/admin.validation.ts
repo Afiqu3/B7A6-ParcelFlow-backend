@@ -20,6 +20,15 @@ const CreateAdminZodSchema = z.object({
 	personalEmail: z.email("Provide a valid email!!"),
 });
 
+const UpdateAdminZodSchema = z.object({
+	name: z
+		.string("Provide your name")
+		.min(3, "Name must at least 3 characters long!!!")
+		.max(50)
+		.optional(),
+});
+
 export const AdminValidation = {
 	CreateAdminZodSchema,
+	UpdateAdminZodSchema,
 };

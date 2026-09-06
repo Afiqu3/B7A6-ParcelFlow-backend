@@ -4,3 +4,7 @@ export interface IAdminCreatePayload {
 	password: string;
 	personalEmail: string;
 }
+
+export interface IAdminUpdatePayload {
+	name?: string;
+}

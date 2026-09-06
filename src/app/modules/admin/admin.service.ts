@@ -1,13 +1,20 @@
 import bcrypt from "bcryptjs";
 import ejs from "ejs";
+import httpStatus from "http-status";
+import type { SignOptions } from "jsonwebtoken";
 import path from "path";
-import { Role } from "../../../generated/prisma/enums";
+import { AccountStatus, Role } from "../../../generated/prisma/enums";
 import type { UserWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
 import type { IQuery } from "../../interfaces";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
-import type { IAdminCreatePayload } from "./admin.interface";
+import { AppError } from "../../utils/AppError";
+import { jwtUtils } from "../../utils/jwt";
+import type {
+	IAdminCreatePayload,
+	IAdminUpdatePayload,
+} from "./admin.interface";
 
 const createAdmin = async (payload: IAdminCreatePayload) => {
 	const { name, email, password, personalEmail } = payload;
@@ -223,9 +230,104 @@ const getAllSuperAdmin = async (query: IQuery) => {
 	};
 };
 
+const updateAdmin = async (payload: IAdminUpdatePayload, userId: string) => {
+	const { name } = payload;
+
+	const existingUser = await prisma.user.findFirst({
+		where: {
+			id: userId,
+			role: { in: ["ADMIN", "SUPER_ADMIN"] },
+		},
+	});
+
+	if (!existingUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "Admin not found");
+	}
+
+	const updatedAdmin = await prisma.user.update({
+		where: {
+			id: userId,
+		},
+		data: {
+			...(name !== undefined && name !== null && { name }),
+		},
+	});
+
+	const jwtPayload = {
+		userId: updatedAdmin.id,
+		name: updatedAdmin.name,
+		email: updatedAdmin.email,
+		role: updatedAdmin.role,
+	};
+
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
+
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
+
+	return {
+		updatedAdmin,
+		accessToken,
+		refreshToken,
+	};
+};
+
+const updateAdminStatus = async (userId: string) => {
+	const existingUser = await prisma.user.findFirst({
+		where: {
+			id: userId,
+			role: { in: ["ADMIN", "SUPER_ADMIN"] },
+		},
+	});
+
+	if (!existingUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "Admin not found");
+	}
+
+	if (existingUser.status === "ACTIVE") {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.BLOCKED,
+			},
+		});
+	} else {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.ACTIVE,
+			},
+		});
+	}
+
+	const updatedAdmin = await prisma.user.findUnique({
+		where: {
+			id: userId,
+		},
+		omit: {
+			password: true,
+		},
+	});
+
+	return updatedAdmin;
+};
+
 export const AdminService = {
 	createAdmin,
 	createSuperAdmin,
 	getAllAdmin,
 	getAllSuperAdmin,
+	updateAdmin,
+	updateAdminStatus,
 };

@@ -33,4 +33,17 @@ router.get(
 	AdminController.getAllSuperAdmin,
 );
 
+router.patch(
+	"/:userId",
+	auth(Role.SUPER_ADMIN, Role.ADMIN),
+	validateRequest(AdminValidation.UpdateAdminZodSchema),
+	AdminController.updateAdmin,
+);
+
+router.patch(
+	"/:userId/status",
+	auth(Role.SUPER_ADMIN),
+	AdminController.updateAdminStatus,
+);
+
 export const AdminRoutes = router;
