@@ -17,7 +17,7 @@ model User {
     updatedAt          DateTime      @updatedAt
 
     merchantProfile MerchantProfile?
-    // riderProfile    RiderProfile?
+    riderProfile    RiderProfile?
     // adminProfile    AdminProfile?
 
     @@index([role, status])

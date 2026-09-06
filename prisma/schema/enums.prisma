@@ -14,3 +14,15 @@ enum AuthProvider {
     GOOGLE
     CREDENTIAL
 }
+
+enum VehicleType {
+    BIKE
+    BICYCLE
+    VAN
+}
+
+enum RiderApplicationStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
