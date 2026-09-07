@@ -19,6 +19,17 @@ import type {
 const createAdmin = async (payload: IAdminCreatePayload) => {
 	const { name, email, password, personalEmail } = payload;
 
+	const isUserExists = await prisma.user.findUnique({
+		where: { email },
+	});
+
+	if (isUserExists) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists",
+		);
+	}
+
 	const hashedPassword = await bcrypt.hash(
 		password,
 		Number(config.bcrypt_salt_rounds),
@@ -62,6 +73,17 @@ const createAdmin = async (payload: IAdminCreatePayload) => {
 
 const createSuperAdmin = async (payload: IAdminCreatePayload) => {
 	const { name, email, password, personalEmail } = payload;
+
+	const isUserExists = await prisma.user.findUnique({
+		where: { email },
+	});
+
+	if (isUserExists) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"User with this email already exists",
+		);
+	}
 
 	const hashedPassword = await bcrypt.hash(
 		password,

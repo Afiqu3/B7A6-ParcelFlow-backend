@@ -5,7 +5,7 @@ const MerchantRegistrationZodSchema = z.object({
 		.string("Provide your name")
 		.min(3, "Name must at least 3 characters long!!!")
 		.max(50),
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 	password: z
 		.string()
 		.min(8, "Password Must Minimum 8 Characters Long.")
@@ -26,12 +26,12 @@ const MerchantRegistrationZodSchema = z.object({
 });
 
 const MerchantEmailVerifyZodSchema = z.object({
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 	otp: z.string().length(6),
 });
 
 const LoginZodSchema = z.object({
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 	password: z
 		.string()
 		.min(8, "Password Must Minimum 8 Characters Long.")
@@ -46,11 +46,11 @@ const LoginZodSchema = z.object({
 });
 
 const ForgotPasswordZodSchema = z.object({
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 });
 
 const ResetPasswordZodSchema = z.object({
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 	newPassword: z
 		.string()
 		.min(8, "Password Must Minimum 8 Characters Long.")

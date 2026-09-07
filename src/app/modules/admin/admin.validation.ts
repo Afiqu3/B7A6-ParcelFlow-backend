@@ -5,7 +5,7 @@ const CreateAdminZodSchema = z.object({
 		.string("Provide your name")
 		.min(3, "Name must at least 3 characters long!!!")
 		.max(50),
-	email: z.email("Provide a valid email!!"),
+	email: z.email("Invalid email address").trim().toLowerCase(),
 	password: z
 		.string()
 		.min(8, "Password Must Minimum 8 Characters Long.")
@@ -17,7 +17,7 @@ const CreateAdminZodSchema = z.object({
 			/[^A-Za-z0-9]/,
 			"Password must contain at least 1 Special Character",
 		),
-	personalEmail: z.email("Provide a valid email!!"),
+	personalEmail: z.email("Invalid email address").trim().toLowerCase(),
 });
 
 const UpdateAdminZodSchema = z.object({
