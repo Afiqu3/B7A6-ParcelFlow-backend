@@ -3,6 +3,8 @@ import { upload } from "../../lib/multer";
 import { validateRequest } from "../../middleware/validateRequest";
 import { RiderController } from "./rider.controller";
 import { RiderValidation } from "./rider.validation";
+import { auth } from "../../middleware/checkAuth";
+import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
@@ -21,6 +23,18 @@ router.post(
 	"/apply/verify-email",
 	validateRequest(RiderValidation.riderEmailValidationSchema),
 	RiderController.verifyRiderEmail,
+);
+
+router.get(
+	"/",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	RiderController.getAllRider,
+);
+
+router.get(
+	"/:riderId",
+	auth(Role.RIDER, Role.ADMIN, Role.SUPER_ADMIN),
+	RiderController.getRiderProfile,
 );
 
 export const RiderRoutes = router;

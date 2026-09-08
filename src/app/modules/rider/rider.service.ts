@@ -15,6 +15,8 @@ import type {
 	IApplyAsRiderPayload,
 	IVerifyRiderEmailPayload,
 } from "./rider.interface";
+import type { IQuery } from "../../interfaces";
+import type { RiderProfileWhereInput } from "../../../generated/prisma/models";
 
 const applyAsRider = async (
 	payload: IApplyAsRiderPayload,
@@ -170,7 +172,121 @@ const verifyRiderEmail = async (payload: IVerifyRiderEmailPayload) => {
 	return verifiedUser;
 };
 
+const getAllRider = async (query: IQuery) => {
+	const limit = query.limit ? Number(query.limit) : 10;
+	const page = query.page ? Number(query.page) : 1;
+	const skip = (page - 1) * limit;
+	const sortBy = query.sortBy ? query.sortBy : "createdAt";
+	const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+	const andConditions: RiderProfileWhereInput[] = [];
+
+	//Searching
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+				{
+					licenseNumber: {
+						contains: query.searchTerm,
+						mode: "insensitive",
+					},
+				},
+			],
+		});
+	}
+
+	if (query.email) {
+		andConditions.push({
+			email: { contains: query.email, mode: "insensitive" },
+		});
+	}
+
+	if (query.licenseNumber) {
+		andConditions.push({
+			licenseNumber: { equals: query.licenseNumber, mode: "insensitive" },
+		});
+	}
+
+	if (query.applicationStatus) {
+		andConditions.push({
+			applicationStatus: query.applicationStatus,
+		});
+	}
+
+	andConditions.push({ user: { role: Role.RIDER }, isDeleted: false });
+
+	const allRiders = await prisma.riderProfile.findMany({
+		where: {
+			AND: andConditions.length > 0 ? andConditions : undefined,
+		},
+
+		take: limit,
+		skip: skip,
+
+		orderBy: {
+			// sortBy : sortOrder
+			[sortBy]: sortOrder,
+		},
+
+		include: {
+			user: {
+				omit: {
+					password: true,
+				},
+			},
+		},
+	});
+
+	const totalRiderCount = await prisma.riderProfile.count({
+		where: {
+			AND: andConditions,
+		},
+	});
+
+	return {
+		data: allRiders,
+		meta: {
+			page: page,
+			limit: limit,
+			total: totalRiderCount,
+			totalPages: Math.ceil(totalRiderCount / limit),
+		},
+	};
+};
+
+const getRiderProfile = async (riderId: string) => {
+	const isRiderExists = await prisma.user.findUnique({
+		where: {
+			id: riderId,
+			role: Role.RIDER,
+		},
+		omit: {
+			password: true,
+		},
+		include: {
+			riderProfile: true,
+		},
+	});
+	if (!isRiderExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "Rider Not Found");
+	}
+
+	if (!isRiderExists.emailVerified) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Rider Email Not Verified");
+	}
+
+	if (isRiderExists.isDeleted) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Rider Account Deleted");
+	}
+
+	return isRiderExists;
+};
+
 export const RiderService = {
 	applyAsRider,
 	verifyRiderEmail,
+	getAllRider,
+	getRiderProfile,
 };

@@ -45,7 +45,34 @@ const verifyRiderEmail = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const getAllRider = catchAsync(async (req: Request, res: Response) => {
+	const { data, meta } = await RiderService.getAllRider(req.query);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Riders Retrieved Successfully",
+		data: data,
+		meta: meta,
+	});
+});
+
+const getRiderProfile = catchAsync(async (req: Request, res: Response) => {
+	const riderId = req.params.riderId;
+
+	const result = await RiderService.getRiderProfile(riderId as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Rider Profile Retrieved Successfully",
+		data: result,
+	});
+});
+
 export const RiderController = {
 	applyAsRider,
 	verifyRiderEmail,
+	getAllRider,
+	getRiderProfile,
 };
