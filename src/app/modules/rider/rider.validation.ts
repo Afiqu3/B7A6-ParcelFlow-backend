@@ -27,7 +27,32 @@ const riderEmailValidationSchema = z.object({
 	otp: z.string().length(6),
 });
 
+const approveRiderValidationSchema = z.object({
+	riderId: z.string().trim(),
+	applicationStatus: z.enum(
+		["APPROVED", "REJECTED"],
+		"Application status must be APPROVED or REJECTED",
+	),
+	rejectionReason: z.string().optional(),
+});
+
+const updateRiderValidationSchema = z.object({
+	name: z
+		.string()
+		.trim()
+		.min(2, "Name must be at least 2 characters long")
+		.optional(),
+	phone: z.string("Provide your phone number").optional(),
+	address: z
+		.string()
+		.trim()
+		.min(5, "Address must be at least 5 characters long")
+		.optional(),
+});
+
 export const RiderValidation = {
 	applyAsRiderZodSchema,
 	riderEmailValidationSchema,
+	approveRiderValidationSchema,
+	updateRiderValidationSchema,
 };

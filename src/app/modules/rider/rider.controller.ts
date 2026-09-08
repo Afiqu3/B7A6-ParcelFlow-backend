@@ -70,9 +70,39 @@ const getRiderProfile = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const approveRider = catchAsync(async (req: Request, res: Response) => {
+	const payload = req.body;
+	const reviewerId = req.user?.userId as string;
+
+	const result = await RiderService.approveRider(payload, reviewerId);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Rider Application Reviewed Successfully",
+		data: result,
+	});
+});
+
+const updateRiderProfile = catchAsync(async (req: Request, res: Response) => {
+	const payload = req.body;
+	const riderId = req.user?.userId as string;
+
+	const result = await RiderService.updateRiderProfile(payload, riderId);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Rider Profile Updated Successfully",
+		data: result,
+	});
+});
+
 export const RiderController = {
 	applyAsRider,
 	verifyRiderEmail,
 	getAllRider,
 	getRiderProfile,
+	approveRider,
+	updateRiderProfile,
 };

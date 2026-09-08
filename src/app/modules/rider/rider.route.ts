@@ -37,4 +37,18 @@ router.get(
 	RiderController.getRiderProfile,
 );
 
+router.post(
+	"/approve",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	validateRequest(RiderValidation.approveRiderValidationSchema),
+	RiderController.approveRider,
+);
+
+router.patch(
+	"/update-profile",
+	auth(Role.RIDER),
+	validateRequest(RiderValidation.updateRiderValidationSchema),
+	RiderController.updateRiderProfile,
+);
+
 export const RiderRoutes = router;

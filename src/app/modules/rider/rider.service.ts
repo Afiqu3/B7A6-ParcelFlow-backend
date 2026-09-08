@@ -4,8 +4,14 @@ import crypto from "crypto";
 import ejs from "ejs";
 import httpStatus from "http-status";
 import path from "path";
-import { Role } from "../../../generated/prisma/enums";
+import {
+	AccountStatus,
+	RiderApplicationStatus,
+	Role,
+} from "../../../generated/prisma/enums";
+import type { RiderProfileWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
+import type { IQuery } from "../../interfaces";
 import { cloudinary } from "../../lib/cloudinary";
 import { transporter } from "../../lib/nodemailer";
 import { prisma } from "../../lib/prisma";
@@ -13,10 +19,10 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import type {
 	IApplyAsRiderPayload,
+	IApproveRiderPayload,
+	IRiderUpdatePayload,
 	IVerifyRiderEmailPayload,
 } from "./rider.interface";
-import type { IQuery } from "../../interfaces";
-import type { RiderProfileWhereInput } from "../../../generated/prisma/models";
 
 const applyAsRider = async (
 	payload: IApplyAsRiderPayload,
@@ -257,23 +263,26 @@ const getAllRider = async (query: IQuery) => {
 };
 
 const getRiderProfile = async (riderId: string) => {
-	const isRiderExists = await prisma.user.findUnique({
+	const isRiderExists = await prisma.riderProfile.findUnique({
 		where: {
 			id: riderId,
-			role: Role.RIDER,
-		},
-		omit: {
-			password: true,
+			user: {
+				role: Role.RIDER,
+			},
 		},
 		include: {
-			riderProfile: true,
+			user: {
+				omit: {
+					password: true,
+				},
+			},
 		},
 	});
 	if (!isRiderExists) {
 		throw new AppError(httpStatus.NOT_FOUND, "Rider Not Found");
 	}
 
-	if (!isRiderExists.emailVerified) {
+	if (!isRiderExists.user.emailVerified) {
 		throw new AppError(httpStatus.BAD_REQUEST, "Rider Email Not Verified");
 	}
 
@@ -284,9 +293,137 @@ const getRiderProfile = async (riderId: string) => {
 	return isRiderExists;
 };
 
+const approveRider = async (
+	payload: IApproveRiderPayload,
+	reviewerId: string,
+) => {
+	const { riderId, applicationStatus, rejectionReason } = payload;
+
+	const existingRider = await prisma.riderProfile.findUnique({
+		where: { id: riderId },
+		include: { user: true },
+	});
+
+	if (!existingRider) {
+		throw new AppError(httpStatus.NOT_FOUND, "Rider Application Not Found");
+	}
+
+	if (existingRider.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Rider Application Has Been Deleted");
+	}
+
+	if (!existingRider.user.emailVerified) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Rider Has Not Verified Their Email Yet. Application Cannot Be Reviewed.",
+		);
+	}
+
+	if (existingRider.applicationStatus !== RiderApplicationStatus.PENDING) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`Rider Application Has Already Been ${existingRider.applicationStatus.toLowerCase()}`,
+		);
+	}
+
+	const updatedRider = await prisma.riderProfile.update({
+		where: { id: riderId },
+		data: {
+			applicationStatus,
+			rejectionReason: rejectionReason ? rejectionReason : null,
+			reviewedById: reviewerId,
+			reviewedAt: new Date(),
+		},
+	});
+
+	const isApproved = applicationStatus === RiderApplicationStatus.APPROVED;
+
+	const templatePath = path.join(
+		process.cwd(),
+		`src/app/templates/${
+			isApproved
+				? "rider-application-approved.ejs"
+				: "rider-application-rejected.ejs"
+		}`,
+	);
+
+	const templateData = {
+		name: updatedRider.name,
+	};
+
+	const html = await ejs.renderFile(templatePath, templateData);
+
+	await transporter.sendMail({
+		from: '"ParcelFlow" <noreply@parcelflow.com>',
+		to: updatedRider.email,
+		subject: isApproved
+			? "Your Rider Application Has Been Approved"
+			: "Your Rider Application Has Been Rejected",
+		html,
+	});
+
+	return updatedRider;
+};
+
+const updateRiderProfile = async (
+	payload: IRiderUpdatePayload,
+	riderId: string,
+) => {
+	const existingRider = await prisma.user.findUnique({
+		where: { id: riderId },
+		include: { riderProfile: true },
+	});
+
+	if (!existingRider) {
+		throw new AppError(httpStatus.NOT_FOUND, "Rider Not Found");
+	}
+
+	if (existingRider.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Rider Account Has Been Deleted");
+	}
+
+	if (!existingRider.emailVerified) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Rider Has Not Verified Their Email Yet. Profile Cannot Be Updated.",
+		);
+	}
+
+	if (existingRider.status === AccountStatus.BLOCKED) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"Rider Account Is Blocked. Profile Cannot Be Updated.",
+		);
+	}
+
+	const updatedRider = await prisma.user.update({
+		where: { id: riderId },
+		data: {
+			name: payload.name ?? existingRider.name,
+			riderProfile: {
+				update: {
+					name: payload.name ?? existingRider.name,
+					phone: payload.phone ?? existingRider.riderProfile?.phone,
+					address: payload.address ?? existingRider.riderProfile?.address,
+				},
+			},
+		},
+		include: {
+			riderProfile: true,
+		},
+		omit: {
+			password: true,
+		},
+	});
+
+	return updatedRider;
+};
+
 export const RiderService = {
 	applyAsRider,
 	verifyRiderEmail,
 	getAllRider,
 	getRiderProfile,
+	approveRider,
+	updateRiderProfile,
 };

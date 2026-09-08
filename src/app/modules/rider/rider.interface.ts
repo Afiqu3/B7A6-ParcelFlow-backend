@@ -1,4 +1,7 @@
-import type { VehicleType } from "../../../generated/prisma/enums";
+import type {
+	RiderApplicationStatus,
+	VehicleType,
+} from "../../../generated/prisma/enums";
 
 export interface IApplyAsRiderPayload {
 	user: {
@@ -17,4 +20,16 @@ export interface IApplyAsRiderPayload {
 export interface IVerifyRiderEmailPayload {
 	email: string;
 	otp: string;
+}
+
+export interface IApproveRiderPayload {
+	riderId: string;
+	applicationStatus: RiderApplicationStatus;
+	rejectionReason?: string;
+}
+
+export interface IRiderUpdatePayload {
+	name?: string;
+	phone?: string;
+	address?: string;
 }
