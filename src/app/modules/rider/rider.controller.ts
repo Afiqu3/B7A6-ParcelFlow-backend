@@ -85,16 +85,27 @@ const approveRider = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateRiderProfile = catchAsync(async (req: Request, res: Response) => {
-	const payload = req.body;
-	const riderId = req.user?.userId as string;
+	const { updatedRider, accessToken, refreshToken } =
+		await RiderService.updateRiderProfile(req.body, req.user?.userId as string);
 
-	const result = await RiderService.updateRiderProfile(payload, riderId);
+	res.cookie("accessToken", accessToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+	});
+	res.cookie("refreshToken", refreshToken, {
+		httpOnly: true,
+		secure: false,
+		sameSite: "none",
+		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+	});
 
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Rider Profile Updated Successfully",
-		data: result,
+		message: "Profile updated Successfully",
+		data: { accessToken, refreshToken, updatedRider },
 	});
 });
 

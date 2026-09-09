@@ -23,6 +23,8 @@ import type {
 	IRiderUpdatePayload,
 	IVerifyRiderEmailPayload,
 } from "./rider.interface";
+import { jwtUtils } from "../../utils/jwt";
+import type { SignOptions } from "jsonwebtoken";
 
 const applyAsRider = async (
 	payload: IApplyAsRiderPayload,
@@ -416,7 +418,30 @@ const updateRiderProfile = async (
 		},
 	});
 
-	return updatedRider;
+	const jwtPayload = {
+		userId: updatedRider.id,
+		name: updatedRider.name,
+		email: updatedRider.email,
+		role: updatedRider.role,
+	};
+
+	const accessToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_access_secret,
+		config.jwt_access_expires_in as SignOptions,
+	);
+
+	const refreshToken = jwtUtils.createToken(
+		jwtPayload,
+		config.jwt_refresh_secret,
+		config.jwt_refresh_expires_in as SignOptions,
+	);
+
+	return {
+		updatedRider,
+		accessToken,
+		refreshToken,
+	};
 };
 
 const updateRiderStatus = async (userId: string) => {

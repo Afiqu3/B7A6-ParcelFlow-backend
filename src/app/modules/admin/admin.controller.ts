@@ -54,7 +54,7 @@ const getAllSuperAdmin = catchAsync(async (req: Request, res: Response) => {
 
 const updateAdmin = catchAsync(async (req: Request, res: Response) => {
 	const { updatedAdmin, accessToken, refreshToken } =
-		await AdminService.updateAdmin(req.body, req.params.userId as string);
+		await AdminService.updateAdmin(req.body, req.user?.userId as string);
 
 	res.cookie("accessToken", accessToken, {
 		httpOnly: true,

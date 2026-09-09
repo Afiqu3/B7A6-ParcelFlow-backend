@@ -34,7 +34,7 @@ router.get(
 );
 
 router.patch(
-	"/:userId",
+	"/",
 	auth(Role.SUPER_ADMIN, Role.ADMIN),
 	validateRequest(AdminValidation.UpdateAdminZodSchema),
 	AdminController.updateAdmin,
