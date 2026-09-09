@@ -111,6 +111,19 @@ const updateRiderStatus = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const showProfile = catchAsync(async (req: Request, res: Response) => {
+	const userId = req.user?.userId;
+
+	const result = await RiderService.showProfile(userId as string);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Your Profile Retrieved Successfully",
+		data: result,
+	});
+});
+
 export const RiderController = {
 	applyAsRider,
 	verifyRiderEmail,
@@ -119,4 +132,5 @@ export const RiderController = {
 	approveRider,
 	updateRiderProfile,
 	updateRiderStatus,
+	showProfile,
 };

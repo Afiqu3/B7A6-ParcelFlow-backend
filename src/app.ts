@@ -13,6 +13,7 @@ import { AdminRoutes } from "./app/modules/admin/admin.route";
 import { AuthRoutes } from "./app/modules/auth/auth.route";
 import { RiderRoutes } from "./app/modules/rider/rider.route";
 import { UserRoutes } from "./app/modules/user/user.route";
+import { MerchantRoutes } from "./app/modules/merchant/merchant.route";
 
 const app: Application = express();
 
@@ -34,6 +35,7 @@ app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/user", UserRoutes);
 app.use("/api/v1/admin", AdminRoutes);
 app.use("/api/v1/rider", RiderRoutes);
+app.use("/api/v1/merchant", MerchantRoutes);
 
 // app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
 //     try {

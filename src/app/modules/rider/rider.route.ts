@@ -1,10 +1,10 @@
 import { Router } from "express";
+import { Role } from "../../../generated/prisma/enums";
 import { upload } from "../../lib/multer";
+import { auth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { RiderController } from "./rider.controller";
 import { RiderValidation } from "./rider.validation";
-import { auth } from "../../middleware/checkAuth";
-import { Role } from "../../../generated/prisma/enums";
 
 const router = Router();
 
@@ -31,11 +31,7 @@ router.get(
 	RiderController.getAllRider,
 );
 
-router.get(
-	"/:riderId",
-	auth(Role.RIDER, Role.ADMIN, Role.SUPER_ADMIN),
-	RiderController.getRiderProfile,
-);
+router.get("/profile", auth(Role.RIDER), RiderController.showProfile);
 
 router.post(
 	"/approve",
@@ -49,6 +45,12 @@ router.patch(
 	auth(Role.RIDER),
 	validateRequest(RiderValidation.updateRiderValidationSchema),
 	RiderController.updateRiderProfile,
+);
+
+router.get(
+	"/:riderId",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	RiderController.getRiderProfile,
 );
 
 router.patch(

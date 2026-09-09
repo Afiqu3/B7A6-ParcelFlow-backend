@@ -466,6 +466,34 @@ const updateRiderStatus = async (userId: string) => {
 	return updatedRider;
 };
 
+const showProfile = async (userId: string) => {
+	const isRiderExists = await prisma.user.findUnique({
+		where: {
+			id: userId,
+			role: Role.RIDER,
+		},
+		omit: {
+			password: true,
+		},
+		include: {
+			riderProfile: true,
+		},
+	});
+	if (!isRiderExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "Rider Not Found");
+	}
+
+	if (!isRiderExists.emailVerified) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Rider Email Not Verified");
+	}
+
+	if (isRiderExists.isDeleted) {
+		throw new AppError(httpStatus.BAD_REQUEST, "Rider Account Deleted");
+	}
+
+	return isRiderExists;
+};
+
 export const RiderService = {
 	applyAsRider,
 	verifyRiderEmail,
@@ -474,4 +502,5 @@ export const RiderService = {
 	approveRider,
 	updateRiderProfile,
 	updateRiderStatus,
+	showProfile,
 };
