@@ -419,6 +419,53 @@ const updateRiderProfile = async (
 	return updatedRider;
 };
 
+const updateRiderStatus = async (userId: string) => {
+	const existingUser = await prisma.user.findFirst({
+		where: {
+			id: userId,
+			role: { in: ["RIDER"] },
+		},
+	});
+
+	if (!existingUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "Rider not found");
+	}
+
+	if (existingUser.status === "ACTIVE") {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.BLOCKED,
+			},
+		});
+	} else {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.ACTIVE,
+			},
+		});
+	}
+
+	const updatedRider = await prisma.user.findUnique({
+		where: {
+			id: userId,
+		},
+		omit: {
+			password: true,
+		},
+		include: {
+			riderProfile: true,
+		},
+	});
+
+	return updatedRider;
+};
+
 export const RiderService = {
 	applyAsRider,
 	verifyRiderEmail,
@@ -426,4 +473,5 @@ export const RiderService = {
 	getRiderProfile,
 	approveRider,
 	updateRiderProfile,
+	updateRiderStatus,
 };

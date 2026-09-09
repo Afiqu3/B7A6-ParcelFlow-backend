@@ -98,6 +98,19 @@ const updateRiderProfile = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const updateRiderStatus = catchAsync(async (req: Request, res: Response) => {
+	const data = await RiderService.updateRiderStatus(
+		req.params.userId as string,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Rider status updated Successfully",
+		data: data,
+	});
+});
+
 export const RiderController = {
 	applyAsRider,
 	verifyRiderEmail,
@@ -105,4 +118,5 @@ export const RiderController = {
 	getRiderProfile,
 	approveRider,
 	updateRiderProfile,
+	updateRiderStatus,
 };

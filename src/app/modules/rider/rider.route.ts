@@ -51,4 +51,10 @@ router.patch(
 	RiderController.updateRiderProfile,
 );
 
+router.patch(
+	"/:userId/status",
+	auth(Role.SUPER_ADMIN, Role.ADMIN),
+	RiderController.updateRiderStatus,
+);
+
 export const RiderRoutes = router;
