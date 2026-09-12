@@ -7,6 +7,12 @@ import { MerchantValidation } from "./merchant.validation";
 
 const router = Router();
 
+router.get(
+	"/",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	MerchantController.getAllMerchant,
+);
+
 router.get("/profile", auth(Role.MERCHANT), MerchantController.showProfile);
 
 router.patch(
@@ -14,6 +20,12 @@ router.patch(
 	auth(Role.MERCHANT),
 	validateRequest(MerchantValidation.updateMerchantProfileValidationSchema),
 	MerchantController.updateMerchantProfile,
+);
+
+router.patch(
+	"/:userId/status",
+	auth(Role.SUPER_ADMIN, Role.ADMIN),
+	MerchantController.updateMerchantStatus,
 );
 
 export const MerchantRoutes = router;

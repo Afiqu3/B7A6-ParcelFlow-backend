@@ -47,7 +47,34 @@ const updateMerchantProfile = catchAsync(
 	},
 );
 
+const getAllMerchant = catchAsync(async (req: Request, res: Response) => {
+	const { data, meta } = await MerchantService.getAllMerchant(req.query);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Merchants Retrieved Successfully",
+		data: data,
+		meta: meta,
+	});
+});
+
+const updateMerchantStatus = catchAsync(async (req: Request, res: Response) => {
+	const data = await MerchantService.updateMerchantStatus(
+		req.params.userId as string,
+	);
+
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Merchant status updated Successfully",
+		data: data,
+	});
+});
+
 export const MerchantController = {
 	showProfile,
 	updateMerchantProfile,
+	getAllMerchant,
+	updateMerchantStatus,
 };

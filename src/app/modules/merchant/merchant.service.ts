@@ -6,6 +6,8 @@ import type { IMerchantUpdatePayload } from "./merchant.interface";
 import { jwtUtils } from "../../utils/jwt";
 import config from "../../config";
 import type { SignOptions } from "jsonwebtoken";
+import type { IQuery } from "../../interfaces";
+import type { MerchantProfileWhereInput } from "../../../generated/prisma/models";
 
 const showProfile = async (userId: string) => {
 	const isMerchantExists = await prisma.user.findUnique({
@@ -114,7 +116,130 @@ const updateMerchantProfile = async (
 	};
 };
 
+const getAllMerchant = async (query: IQuery) => {
+	const limit = query.limit ? Number(query.limit) : 10;
+	const page = query.page ? Number(query.page) : 1;
+	const skip = (page - 1) * limit;
+	const sortBy = query.sortBy ? query.sortBy : "createdAt";
+	const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+	const andConditions: MerchantProfileWhereInput[] = [];
+
+	//Searching
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{ name: { contains: query.searchTerm, mode: "insensitive" } },
+				{ email: { contains: query.searchTerm, mode: "insensitive" } },
+			],
+		});
+	}
+
+	if (query.email) {
+		andConditions.push({
+			email: { contains: query.email, mode: "insensitive" },
+		});
+	}
+
+	if (query.status) {
+		andConditions.push({
+			user: {
+				status: query.status,
+			},
+		});
+	}
+
+	andConditions.push({ user: { role: Role.MERCHANT }, isDeleted: false });
+
+	const allMerchants = await prisma.merchantProfile.findMany({
+		where: {
+			AND: andConditions.length > 0 ? andConditions : undefined,
+		},
+
+		take: limit,
+		skip: skip,
+
+		orderBy: {
+			// sortBy : sortOrder
+			[sortBy]: sortOrder,
+		},
+
+		include: {
+			user: {
+				omit: {
+					password: true,
+				},
+			},
+		},
+	});
+
+	const totalMerchantCount = await prisma.merchantProfile.count({
+		where: {
+			AND: andConditions,
+		},
+	});
+
+	return {
+		data: allMerchants,
+		meta: {
+			page: page,
+			limit: limit,
+			total: totalMerchantCount,
+			totalPages: Math.ceil(totalMerchantCount / limit),
+		},
+	};
+};
+
+const updateMerchantStatus = async (userId: string) => {
+	const existingUser = await prisma.user.findFirst({
+		where: {
+			id: userId,
+			role: { in: ["MERCHANT"] },
+		},
+	});
+
+	if (!existingUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "Merchant not found");
+	}
+
+	if (existingUser.status === "ACTIVE") {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.BLOCKED,
+			},
+		});
+	} else {
+		await prisma.user.update({
+			where: {
+				id: userId,
+			},
+			data: {
+				status: AccountStatus.ACTIVE,
+			},
+		});
+	}
+
+	const updatedMerchant = await prisma.user.findUnique({
+		where: {
+			id: userId,
+		},
+		omit: {
+			password: true,
+		},
+		include: {
+			merchantProfile: true,
+		},
+	});
+
+	return updatedMerchant;
+};
+
 export const MerchantService = {
 	showProfile,
 	updateMerchantProfile,
+	getAllMerchant,
+	updateMerchantStatus,
 };
