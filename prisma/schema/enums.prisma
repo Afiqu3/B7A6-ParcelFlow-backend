@@ -26,3 +26,65 @@ enum RiderApplicationStatus {
     APPROVED
     REJECTED
 }
+
+enum PickupMode {
+    RIDER_PICKUP
+    MERCHANT_DROP
+}
+
+enum ParcelCategory {
+    DOCUMENT // Papers, certificates — flat rate, no COD
+    PARCEL // Physical goods — standard pricing
+}
+
+enum ZoneType {
+    INSIDE_CITY // same city (Dhaka -> Dhaka)
+    SUB_CITY // nearby district, same division
+    OUTSIDE_CITY // other division / nationwide
+}
+
+enum DeliveryType {
+    REGULAR // 48-72h
+    EXPRESS // 24h
+    SAME_DAY
+}
+
+enum PaymentType {
+    PREPAID
+    COD
+}
+
+enum ParcelStatus {
+    CREATED
+    PICKUP_ASSIGNED
+    PICKED_UP
+    AT_HUB
+    IN_TRANSIT
+    OUT_FOR_DELIVERY
+    DELIVERED
+    DELIVERY_FAILED
+    RETURNED_TO_MERCHANT
+    CANCELLED
+}
+
+enum TransactionStatus {
+    PENDING
+    PAID
+    FAILED
+    EXPIRED
+    REFUNDED
+}
+
+enum AssignmentLeg {
+    PICKUP
+    DELIVERY
+}
+
+enum AssignmentStatus {
+    ASSIGNED
+    ACCEPTED
+    IN_PROGRESS
+    COMPLETED
+    FAILED
+    CANCELLED
+}

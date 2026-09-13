@@ -1,0 +1,34 @@
+model Assignment {
+    id String @id @default(uuid())
+
+    leg    AssignmentLeg
+    status AssignmentStatus @default(ASSIGNED)
+
+    attemptNumber Int @default(1)
+
+    assignedAt  DateTime  @default(now())
+    acceptedAt  DateTime?
+    startedAt   DateTime?
+    completedAt DateTime?
+    failedAt    DateTime?
+    cancelledAt DateTime?
+
+    failureReason String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    parcelId String
+    parcel   Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+    riderId String
+    rider   RiderProfile @relation(fields: [riderId], references: [id], onDelete: Restrict)
+
+    assignedById String?
+    assignedBy   User?   @relation("AssignedByAdmin", fields: [assignedById], references: [id])
+
+    @@index([parcelId, leg])
+    @@index([riderId, status])
+    @@index([status])
+    @@map("assignments")
+}

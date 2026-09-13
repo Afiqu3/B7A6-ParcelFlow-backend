@@ -18,6 +18,7 @@ model User {
 
     merchantProfile MerchantProfile?
     riderProfile    RiderProfile?
+    assignmentsMade Assignment[]     @relation("AssignedByAdmin")
     // adminProfile    AdminProfile?
 
     @@index([role, status])

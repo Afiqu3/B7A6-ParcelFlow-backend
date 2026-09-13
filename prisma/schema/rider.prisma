@@ -26,6 +26,8 @@ model RiderProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
+  assignments Assignment[]
+
   @@index([email], name: "idx_rider_email")
   @@index([applicationStatus], name: "idx_rider_applicationStatus")
   @@map("riderProfiles")
