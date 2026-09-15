@@ -71,7 +71,7 @@ enum TransactionStatus {
     PENDING
     PAID
     FAILED
-    EXPIRED
+    CANCELLED
     REFUNDED
 }
 

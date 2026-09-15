@@ -13,7 +13,6 @@ model MerchantProfile {
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
     parcels      Parcel[]
-    transactions Transaction[]
 
     @@index([businessName])
     @@index([email], name: "idx_merchants_email")

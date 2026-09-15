@@ -59,34 +59,6 @@ export const updatePricingRuleZodSchema = createPricingRuleZodSchema
 		error: "At least one field must be provided to update",
 	});
 
-// const createPricingRuleZodSchema = pricingRuleBase
-//     .refine(
-//         (data) =>
-//             data.parcelCategory !== "DOCUMENT" ||
-//             (data.codFeePercent ?? 0) === 0,
-//         {
-//             error: "Document parcels cannot have a COD fee",
-//             path: ["codFeePercent"],
-//         },
-//     )
-//     .refine(
-//         (data) =>
-//             data.parcelCategory !== "DOCUMENT" || (data.perKgCharge ?? 0) === 0,
-//         {
-//             error: "Document parcels should not have a per-kg charge",
-//             path: ["perKgCharge"],
-//         },
-//     )
-//     .refine(
-//         (data) =>
-//             data.parcelCategory !== "DOCUMENT" ||
-//             (data.baseWeightKg ?? 1) === 1,
-//         {
-//             error: "Document parcels should not set a custom base weight",
-//             path: ["baseWeightKg"],
-//         },
-//     );
-
 export const PricingRuleValidations = {
 	createPricingRuleZodSchema,
 	updatePricingRuleZodSchema,
