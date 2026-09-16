@@ -43,6 +43,32 @@ const applyAsRider = async (
 		);
 	}
 
+	const isUniqueLicenseNumber = await prisma.riderProfile.findUnique({
+		where: {
+			licenseNumber: payload.riderProfile.licenseNumber,
+		},
+	});
+
+	if (isUniqueLicenseNumber) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Rider Already Exists With This License Number",
+		);
+	}
+
+	const isUniqueNid = await prisma.riderProfile.findUnique({
+		where: {
+			nid: payload.riderProfile.nid,
+		},
+	});
+
+	if (isUniqueNid) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Rider Already Exists With This NID Number",
+		);
+	}
+
 	const vehiclePaperUploadResult = await new Promise<UploadApiResponse>(
 		(resolve, reject) => {
 			cloudinary.uploader

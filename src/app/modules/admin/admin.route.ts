@@ -24,7 +24,7 @@ router.post(
 	"/super-admin",
 	auth(Role.SUPER_ADMIN),
 	validateRequest(AdminValidation.CreateAdminZodSchema),
-	AdminController.createAdmin,
+	AdminController.createSuperAdmin,
 );
 
 router.get(

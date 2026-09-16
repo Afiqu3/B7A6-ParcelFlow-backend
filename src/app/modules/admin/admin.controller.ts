@@ -23,7 +23,7 @@ const createSuperAdmin = catchAsync(async (req: Request, res: Response) => {
 	sendResponse(res, {
 		statusCode: httpStatus.CREATED,
 		success: true,
-		message: "Admin created successfully",
+		message: "Super Admin created successfully",
 		data: null,
 	});
 });
