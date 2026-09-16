@@ -22,4 +22,16 @@ router.post(
   ParcelController.initiateParcelPayment,
 );
 
+router.post(
+    "/:parcelId/cancel",
+    auth(Role.MERCHANT),
+    ParcelController.cancelParcel,
+);
+
+router.get(
+	"/my-parcels",
+	auth(Role.MERCHANT),
+	ParcelController.getMyParcels,
+);
+
 export const ParcelRoutes = router;

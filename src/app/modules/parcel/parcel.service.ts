@@ -13,6 +13,9 @@ import { AppError } from "../../utils/AppError";
 import { calculateParcelPrice } from "../../utils/calculateParcelPrice";
 import { generateTrackingId } from "../../utils/generateTrackingId";
 import type { ICreateParcelPayload } from "./parcel.interface";
+import { refundBkashPayment } from "../../utils/refundBkashPayment";
+import { IQuery } from "../../interfaces";
+import { ParcelWhereInput } from "../../../generated/prisma/models";
 
 const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
   // ── 1. Resolve and validate the authenticated merchant ────
@@ -310,6 +313,9 @@ const paymentCallback = async (query: Record<string, any>) => {
           where: {
             id: executedPaymentResult.merchantInvoiceNumber,
           },
+          include: {
+            merchant: true,
+          },
         });
 
         if (!parcel) {
@@ -375,8 +381,190 @@ const paymentCallback = async (query: Record<string, any>) => {
   return transactionResult;
 };
 
+/**
+ * Cancel a parcel (owning merchant only).
+ *
+ * Cancellation is allowed only before pickup — i.e. while the parcel is still
+ * CREATED or PICKUP_ASSIGNED. A refund is issued only when the parcel is PREPAID
+ * and already PAID; COD or unpaid-prepaid parcels are cancelled with no refund.
+ */
+const cancelParcel = async (
+  parcelId: string,
+  userId: string,
+  cancelReason?: string,
+) => {
+  const parcel = await prisma.parcel.findUnique({
+    where: { id: parcelId },
+    include: { merchant: true, transaction: true },
+  });
+
+  if (!parcel || parcel.isDeleted) {
+    throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+  }
+
+  // Ownership: only the owning merchant can cancel their parcel.
+  if (parcel.merchant.userId !== userId) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      "You do not have access to this parcel",
+    );
+  }
+
+  if (parcel.status === ParcelStatus.CANCELLED) {
+    throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
+  }
+
+  // Cancellation is only allowed before pickup.
+  if (
+    parcel.status !== ParcelStatus.CREATED &&
+    parcel.status !== ParcelStatus.PICKUP_ASSIGNED
+  ) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      `A parcel can only be cancelled before pickup (while ${ParcelStatus.CREATED} or ${ParcelStatus.PICKUP_ASSIGNED}). Current status: ${parcel.status}`,
+    );
+  }
+
+  const transaction = parcel.transaction;
+
+  // Refund only when the parcel is prepaid AND already paid.
+  const shouldRefund =
+    parcel.paymentType === PaymentType.PREPAID &&
+    transaction?.status === TransactionStatus.PAID;
+
+  let refundResult = null;
+  if (shouldRefund) {
+    if (!transaction?.bkashPaymentID || !transaction?.bkashTrxID) {
+      throw new AppError(
+        httpStatus.CONFLICT,
+        "Cannot refund: bKash payment/transaction id is missing on the paid transaction",
+      );
+    }
+
+    refundResult = await refundBkashPayment({
+      paymentID: transaction.bkashPaymentID,
+      trxID: transaction.bkashTrxID,
+      amount: Number(transaction.amount),
+      sku: parcel.trackingId,
+      reason: cancelReason || "Parcel cancelled",
+    });
+  }
+
+  // Persist the cancellation (+ refund/void bookkeeping) atomically.
+  const cancelledParcel = await prisma.$transaction(async (tx) => {
+    const updated = await tx.parcel.update({
+      where: { id: parcel.id },
+      data: {
+        status: ParcelStatus.CANCELLED,
+        cancelledAt: new Date(),
+        cancelledById: userId,
+        cancelReason: cancelReason ?? null,
+      },
+    });
+
+    if (transaction) {
+      if (shouldRefund) {
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: TransactionStatus.REFUNDED,
+            refundedAmount: transaction.amount,
+            refundedAt: refundResult?.completedTime ?? new Date().toISOString(),
+            refundReason: cancelReason ?? "Parcel cancelled",
+            refundTxID: refundResult?.refundTrxID,
+          },
+        });
+      } else if (transaction.status === TransactionStatus.PENDING) {
+        // Unpaid prepaid parcel — nothing was collected, so just void it.
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: { status: TransactionStatus.CANCELLED },
+        });
+      }
+    }
+
+    return updated;
+  });
+
+  return {
+    parcel: cancelledParcel,
+    refunded: shouldRefund,
+    refundedAmount: shouldRefund ? Number(transaction!.amount) : 0,
+  };
+};
+
+const getMyParcels = async (query: IQuery, userId: string) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy ? query.sortBy : "createdAt";
+  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+  const isUserExists = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!isUserExists) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
+
+  const andConditions: ParcelWhereInput[] = [
+    {
+      merchant: {
+        userId,
+      },
+      isDeleted: false,
+    },
+  ];
+
+  if (query.searchTerm) {
+    andConditions.push({
+      OR: [
+        {
+          trackingId: {
+            contains: query.searchTerm,
+            mode: "insensitive",
+          },
+        },
+      ],
+    });
+  }
+
+  if (query.status) {
+    andConditions.push({
+      status: query.status,
+    });
+  }
+
+  const parcels = await prisma.parcel.findMany({
+    where: { AND: andConditions },
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    include: {
+      transaction: true,
+    },
+  });
+
+  const total = await prisma.parcel.count({
+    where: { AND: andConditions },
+  });
+
+  return {
+    data: parcels,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const ParcelService = {
   createParcel,
   initiateParcelPayment,
   paymentCallback,
+  cancelParcel,
+  getMyParcels,
 };
