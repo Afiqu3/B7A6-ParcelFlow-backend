@@ -11,7 +11,6 @@ model Transaction {
 
     bkashPaymentID String? @unique
     bkashTrxID     String?
-    bkashStatus    String?
     payerReference String?
     paidAt         String?
 

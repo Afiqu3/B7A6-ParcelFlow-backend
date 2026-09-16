@@ -1,384 +1,384 @@
 import httpStatus from "http-status";
 import {
-  DeliveryType,
-  ParcelStatus,
-  PaymentType,
-  PickupMode,
-  TransactionStatus,
+	DeliveryType,
+	ParcelStatus,
+	PaymentType,
+	PickupMode,
+	TransactionStatus,
 } from "../../../generated/prisma/enums";
+import type { ParcelWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
+import type { IQuery } from "../../interfaces";
 import { getBkashIdToken } from "../../lib/bkash";
 import { prisma } from "../../lib/prisma";
 import { AppError } from "../../utils/AppError";
 import { calculateParcelPrice } from "../../utils/calculateParcelPrice";
 import { generateTrackingId } from "../../utils/generateTrackingId";
-import type { ICreateParcelPayload } from "./parcel.interface";
 import { refundBkashPayment } from "../../utils/refundBkashPayment";
-import { IQuery } from "../../interfaces";
-import { ParcelWhereInput } from "../../../generated/prisma/models";
+import type { ICreateParcelPayload } from "./parcel.interface";
 
 const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
-  // ── 1. Resolve and validate the authenticated merchant ────
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { merchantProfile: true },
-  });
+	// ── 1. Resolve and validate the authenticated merchant ────
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		include: { merchantProfile: true },
+	});
 
-  if (!user || !user.merchantProfile) {
-    throw new AppError(httpStatus.NOT_FOUND, "Merchant profile not found");
-  }
+	if (!user || !user.merchantProfile) {
+		throw new AppError(httpStatus.NOT_FOUND, "Merchant profile not found");
+	}
 
-  if (user.isDeleted) {
-    throw new AppError(httpStatus.GONE, "Merchant account has been deleted");
-  }
+	if (user.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Merchant account has been deleted");
+	}
 
-  if (!user.emailVerified) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Merchant email is not verified. Parcels cannot be created.",
-    );
-  }
+	if (!user.emailVerified) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Merchant email is not verified. Parcels cannot be created.",
+		);
+	}
 
-  // ── 2. Resolve the active pricing rule (zone + category) ──
-  const pricingRule = await prisma.pricingRule.findFirst({
-    where: {
-      zoneType: payload.deliveryZoneType,
-      parcelCategory: payload.parcelCategory,
-      isActive: true,
-    },
-  });
+	// ── 2. Resolve the active pricing rule (zone + category) ──
+	const pricingRule = await prisma.pricingRule.findFirst({
+		where: {
+			zoneType: payload.deliveryZoneType,
+			parcelCategory: payload.parcelCategory,
+			isActive: true,
+		},
+	});
 
-  if (!pricingRule) {
-    throw new AppError(
-      httpStatus.NOT_FOUND,
-      `No active pricing rule found for ${payload.parcelCategory} parcels in zone ${payload.deliveryZoneType}`,
-    );
-  }
+	if (!pricingRule) {
+		throw new AppError(
+			httpStatus.NOT_FOUND,
+			`No active pricing rule found for ${payload.parcelCategory} parcels in zone ${payload.deliveryZoneType}`,
+		);
+	}
 
-  // ── 3. Compute the frozen price breakdown ─────────────────
-  // Pricing-rule columns are Prisma Decimal; the pure calculator works on
-  // numbers. All amounts are derived server-side — never from the client.
-  const deliveryType = payload.deliveryType ?? DeliveryType.REGULAR;
-  const pickupMode = payload.pickupMode ?? PickupMode.RIDER_PICKUP;
+	// ── 3. Compute the frozen price breakdown ─────────────────
+	// Pricing-rule columns are Prisma Decimal; the pure calculator works on
+	// numbers. All amounts are derived server-side — never from the client.
+	const deliveryType = payload.deliveryType ?? DeliveryType.REGULAR;
+	const pickupMode = payload.pickupMode ?? PickupMode.RIDER_PICKUP;
 
-  const priceBreakdown = calculateParcelPrice(
-    {
-      baseWeightKg: Number(pricingRule.baseWeightKg),
-      baseCharge: Number(pricingRule.baseCharge),
-      perKgCharge: Number(pricingRule.perKgCharge),
-      expressSurcharge: Number(pricingRule.expressSurcharge),
-      sameDaySurcharge: Number(pricingRule.sameDaySurcharge),
-      riderPickupCharge: Number(pricingRule.riderPickupCharge),
-      codFeePercent: Number(pricingRule.codFeePercent),
-    },
-    {
-      weightKg: payload.weightKg,
-      deliveryType,
-      pickupMode,
-      paymentType: payload.paymentType,
-      codAmount: payload.codAmount,
-      deliveryZoneType: payload.deliveryZoneType,
-    },
-  );
+	const priceBreakdown = calculateParcelPrice(
+		{
+			baseWeightKg: Number(pricingRule.baseWeightKg),
+			baseCharge: Number(pricingRule.baseCharge),
+			perKgCharge: Number(pricingRule.perKgCharge),
+			expressSurcharge: Number(pricingRule.expressSurcharge),
+			sameDaySurcharge: Number(pricingRule.sameDaySurcharge),
+			riderPickupCharge: Number(pricingRule.riderPickupCharge),
+			codFeePercent: Number(pricingRule.codFeePercent),
+		},
+		{
+			weightKg: payload.weightKg,
+			deliveryType,
+			pickupMode,
+			paymentType: payload.paymentType,
+			codAmount: payload.codAmount,
+			deliveryZoneType: payload.deliveryZoneType,
+		},
+	);
 
-  const isCod = payload.paymentType === PaymentType.COD;
-  const isPrepaid = payload.paymentType === PaymentType.PREPAID;
+	const isCod = payload.paymentType === PaymentType.COD;
+	const isPrepaid = payload.paymentType === PaymentType.PREPAID;
 
-  // ── 4. Persist the parcel (+ pending transaction) ─────────
-  // Only DB writes live in the interactive transaction, so it stays short.
-  const parcel = await prisma.$transaction(async (tx) => {
-    const created = await tx.parcel.create({
-      data: {
-        trackingId: generateTrackingId(),
-        merchantId: user.merchantProfile!.id,
+	// ── 4. Persist the parcel (+ pending transaction) ─────────
+	// Only DB writes live in the interactive transaction, so it stays short.
+	const parcel = await prisma.$transaction(async (tx) => {
+		const created = await tx.parcel.create({
+			data: {
+				trackingId: generateTrackingId(),
+				merchantId: user.merchantProfile!.id,
 
-        // Pickup
-        pickupContactName: payload.pickupContactName,
-        pickupContactPhone: payload.pickupContactPhone,
-        pickupAddressLine: payload.pickupAddressLine,
-        pickupMode,
-        pickupDistrict: payload.pickupDistrict,
-        pickupCity: payload.pickupCity,
-        note: payload.note,
+				// Pickup
+				pickupContactName: payload.pickupContactName,
+				pickupContactPhone: payload.pickupContactPhone,
+				pickupAddressLine: payload.pickupAddressLine,
+				pickupMode,
+				pickupDistrict: payload.pickupDistrict,
+				pickupCity: payload.pickupCity,
+				note: payload.note,
 
-        // Recipient / delivery
-        recipientName: payload.recipientName,
-        recipientPhone: payload.recipientPhone,
-        recipientEmail: payload.recipientEmail,
-        deliveryAddressLine: payload.deliveryAddressLine,
-        deliveryDistrict: payload.deliveryDistrict,
-        deliveryCity: payload.deliveryCity,
-        deliveryZoneType: payload.deliveryZoneType,
+				// Recipient / delivery
+				recipientName: payload.recipientName,
+				recipientPhone: payload.recipientPhone,
+				recipientEmail: payload.recipientEmail,
+				deliveryAddressLine: payload.deliveryAddressLine,
+				deliveryDistrict: payload.deliveryDistrict,
+				deliveryCity: payload.deliveryCity,
+				deliveryZoneType: payload.deliveryZoneType,
 
-        // Shipment / item
-        parcelCategory: payload.parcelCategory,
-        weightKg: payload.weightKg,
-        itemDescription: payload.itemDescription,
-        itemQuantity: payload.itemQuantity ?? 1,
-        declaredValue: payload.declaredValue,
-        deliveryType,
+				// Shipment / item
+				parcelCategory: payload.parcelCategory,
+				weightKg: payload.weightKg,
+				itemDescription: payload.itemDescription,
+				itemQuantity: payload.itemQuantity ?? 1,
+				declaredValue: payload.declaredValue,
+				deliveryType,
 
-        // Payment
-        paymentType: payload.paymentType,
-        codAmount: isCod ? payload.codAmount : null,
+				// Payment
+				paymentType: payload.paymentType,
+				codAmount: isCod ? payload.codAmount : null,
 
-        // Frozen price breakdown (server-computed)
-        baseCharge: priceBreakdown.baseCharge,
-        weightCharge: priceBreakdown.weightCharge,
-        deliveryTypeSurcharge: priceBreakdown.deliveryTypeSurcharge,
-        pickupModeCharge: priceBreakdown.pickupModeCharge,
-        codFee: priceBreakdown.codFee,
-        totalCharge: priceBreakdown.totalCharge,
-      },
-    });
+				// Frozen price breakdown (server-computed)
+				baseCharge: priceBreakdown.baseCharge,
+				weightCharge: priceBreakdown.weightCharge,
+				deliveryTypeSurcharge: priceBreakdown.deliveryTypeSurcharge,
+				pickupModeCharge: priceBreakdown.pickupModeCharge,
+				codFee: priceBreakdown.codFee,
+				totalCharge: priceBreakdown.totalCharge,
+			},
+		});
 
-    // Prepaid parcels owe the delivery charge up front — record it as
-    // PENDING now (default status). bKash is initiated separately.
-    if (isPrepaid) {
-      await tx.transaction.create({
-        data: {
-          parcelId: created.id,
-          amount: priceBreakdown.totalCharge,
-          merchantInvoiceNumber: created.id,
-          payerReference: user.email,
-        },
-      });
-    }
+		// Prepaid parcels owe the delivery charge up front — record it as
+		// PENDING now (default status). bKash is initiated separately.
+		if (isPrepaid) {
+			await tx.transaction.create({
+				data: {
+					parcelId: created.id,
+					amount: priceBreakdown.totalCharge,
+					merchantInvoiceNumber: created.id,
+					payerReference: user.email,
+				},
+			});
+		}
 
-    return created;
-  });
+		return created;
+	});
 
-  return {
-    parcel,
-    // Prepaid still needs an online payment; COD is collected on delivery.
-    requiresPayment: isPrepaid,
-  };
+	return {
+		parcel,
+		// Prepaid still needs an online payment; COD is collected on delivery.
+		requiresPayment: isPrepaid,
+	};
 };
 
 const initiateParcelPayment = async (parcelId: string, userId: string) => {
-  const parcel = await prisma.parcel.findUnique({
-    where: { id: parcelId },
-    include: { merchant: true, transaction: true },
-  });
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: { merchant: true, transaction: true },
+	});
 
-  if (!parcel || parcel.isDeleted) {
-    throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
-  }
+	if (!parcel || parcel.isDeleted) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
 
-  if (parcel.merchant.userId !== userId) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "You do not have access to this parcel",
-    );
-  }
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
+	}
 
-  if (parcel.paymentType !== PaymentType.PREPAID) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Only prepaid parcels can be paid online",
-    );
-  }
+	if (parcel.paymentType !== PaymentType.PREPAID) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Only prepaid parcels can be paid online",
+		);
+	}
 
-  if (parcel.status === ParcelStatus.CANCELLED) {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "Cannot pay for a cancelled parcel",
-    );
-  }
+	if (parcel.status === ParcelStatus.CANCELLED) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Cannot pay for a cancelled parcel",
+		);
+	}
 
-  const transaction = parcel.transaction;
+	const transaction = parcel.transaction;
 
-  if (!transaction) {
-    throw new AppError(
-      httpStatus.NOT_FOUND,
-      "No transaction found for this parcel",
-    );
-  }
+	if (!transaction) {
+		throw new AppError(
+			httpStatus.NOT_FOUND,
+			"No transaction found for this parcel",
+		);
+	}
 
-  if (transaction.status === TransactionStatus.PAID) {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      "This parcel has already been paid",
-    );
-  }
-  const bkashIdToken = await getBkashIdToken();
+	if (transaction.status === TransactionStatus.PAID) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"This parcel has already been paid",
+		);
+	}
+	const bkashIdToken = await getBkashIdToken();
 
-  if (!bkashIdToken) {
-    throw new AppError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      "No Bkash Access Token Found!",
-    );
-  }
+	if (!bkashIdToken) {
+		throw new AppError(
+			httpStatus.INTERNAL_SERVER_ERROR,
+			"No Bkash Access Token Found!",
+		);
+	}
 
-  const bkashCreatePaymentResponse = await fetch(
-    `${config.bkash_base_url}/tokenized/checkout/create`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: bkashIdToken,
-        "X-App-Key": config.bkash_app_key,
-      },
-      body: JSON.stringify({
-        mode: "0011",
-        payerReference: parcel.merchant.email,
-        callbackURL: `${config.bkash_callback_url}/parcel/payment/callback`,
-        amount: Number(transaction.amount).toFixed(2),
-        currency: "BDT",
-        intent: "sale",
-        merchantInvoiceNumber: transaction.merchantInvoiceNumber,
-      }),
-    },
-  );
+	const bkashCreatePaymentResponse = await fetch(
+		`${config.bkash_base_url}/tokenized/checkout/create`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+				Authorization: bkashIdToken,
+				"X-App-Key": config.bkash_app_key,
+			},
+			body: JSON.stringify({
+				mode: "0011",
+				payerReference: parcel.merchant.email,
+				callbackURL: `${config.bkash_callback_url}/parcel/payment/callback`,
+				amount: Number(transaction.amount).toFixed(2),
+				currency: "BDT",
+				intent: "sale",
+				merchantInvoiceNumber: transaction.merchantInvoiceNumber,
+			}),
+		},
+	);
 
-  const bkashCreatePaymentResult = await bkashCreatePaymentResponse.json();
+	const bkashCreatePaymentResult = await bkashCreatePaymentResponse.json();
 
-  if (
-    !bkashCreatePaymentResponse.ok ||
-    bkashCreatePaymentResult.statusCode !== "0000" ||
-    !bkashCreatePaymentResult.paymentID ||
-    !bkashCreatePaymentResult.bkashURL
-  ) {
-    throw new AppError(
-      httpStatus.BAD_GATEWAY,
-      bkashCreatePaymentResult?.statusMessage ||
-        "Failed to initiate bKash payment",
-    );
-  }
+	if (
+		!bkashCreatePaymentResponse.ok ||
+		bkashCreatePaymentResult.statusCode !== "0000" ||
+		!bkashCreatePaymentResult.paymentID ||
+		!bkashCreatePaymentResult.bkashURL
+	) {
+		throw new AppError(
+			httpStatus.BAD_GATEWAY,
+			bkashCreatePaymentResult?.statusMessage ||
+				"Failed to initiate bKash payment",
+		);
+	}
 
-  await prisma.transaction.update({
-    where: { id: transaction.id },
-    data: {
-      bkashPaymentID: bkashCreatePaymentResult.paymentID,
-      bkashResponse: bkashCreatePaymentResult,
-      status: TransactionStatus.PENDING,
-    },
-  });
+	await prisma.transaction.update({
+		where: { id: transaction.id },
+		data: {
+			bkashPaymentID: bkashCreatePaymentResult.paymentID,
+			bkashResponse: bkashCreatePaymentResult,
+			status: TransactionStatus.PENDING,
+		},
+	});
 
-  return {
-    parcelId: parcel.id,
-    trackingId: parcel.trackingId,
-    amount: Number(transaction.amount),
-    paymentUrl: bkashCreatePaymentResult.bkashURL,
-    paymentID: bkashCreatePaymentResult.paymentID,
-  };
+	return {
+		parcelId: parcel.id,
+		trackingId: parcel.trackingId,
+		amount: Number(transaction.amount),
+		paymentUrl: bkashCreatePaymentResult.bkashURL,
+		paymentID: bkashCreatePaymentResult.paymentID,
+	};
 };
 
 const paymentCallback = async (query: Record<string, any>) => {
-  const transactionResult = await prisma.$transaction(
-    async (tx) => {
-      const paymentId = query.paymentID;
+	const transactionResult = await prisma.$transaction(
+		async (tx) => {
+			const paymentId = query.paymentID;
 
-      if (!paymentId) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Payment Id Missing");
-      }
+			if (!paymentId) {
+				throw new AppError(httpStatus.BAD_REQUEST, "Payment Id Missing");
+			}
 
-      const status = query.status;
+			const status = query.status;
 
-      if (!status) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Payment Status is Missing");
-      }
+			if (!status) {
+				throw new AppError(httpStatus.BAD_REQUEST, "Payment Status is Missing");
+			}
 
-      const bkashIdToken = await getBkashIdToken();
+			const bkashIdToken = await getBkashIdToken();
 
-      if (!bkashIdToken) {
-        throw new AppError(
-          httpStatus.BAD_GATEWAY,
-          "No Bkash Access Token Found!",
-        );
-      }
+			if (!bkashIdToken) {
+				throw new AppError(
+					httpStatus.BAD_GATEWAY,
+					"No Bkash Access Token Found!",
+				);
+			}
 
-      const executedPaymentResponse = await fetch(
-        `${config.bkash_base_url}/tokenized/checkout/execute`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: bkashIdToken,
-            "X-App-Key": config.bkash_app_key,
-          },
+			const executedPaymentResponse = await fetch(
+				`${config.bkash_base_url}/tokenized/checkout/execute`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+						Authorization: bkashIdToken,
+						"X-App-Key": config.bkash_app_key,
+					},
 
-          body: JSON.stringify({
-            paymentID: paymentId,
-          }),
-        },
-      );
+					body: JSON.stringify({
+						paymentID: paymentId,
+					}),
+				},
+			);
 
-      const executedPaymentResult = await executedPaymentResponse.json();
+			const executedPaymentResult = await executedPaymentResponse.json();
 
-      if (status === "success") {
-        const parcel = await tx.parcel.findUnique({
-          where: {
-            id: executedPaymentResult.merchantInvoiceNumber,
-          },
-          include: {
-            merchant: true,
-          },
-        });
+			if (status === "success") {
+				const parcel = await tx.parcel.findUnique({
+					where: {
+						id: executedPaymentResult.merchantInvoiceNumber,
+					},
+					include: {
+						merchant: true,
+					},
+				});
 
-        if (!parcel) {
-          throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found!");
-        }
+				if (!parcel) {
+					throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found!");
+				}
 
-        await tx.transaction.update({
-          where: {
-            parcelId: executedPaymentResult.merchantInvoiceNumber,
-            bkashPaymentID: paymentId,
-          },
-          data: {
-            status: TransactionStatus.PAID,
-            bkashTrxID: executedPaymentResult.trxID,
-            paidAt: executedPaymentResult.paymentExecuteTime,
-            bkashResponse: executedPaymentResult,
-          },
-        });
+				await tx.transaction.update({
+					where: {
+						parcelId: executedPaymentResult.merchantInvoiceNumber,
+						bkashPaymentID: paymentId,
+					},
+					data: {
+						status: TransactionStatus.PAID,
+						bkashTrxID: executedPaymentResult.trxID,
+						paidAt: executedPaymentResult.paymentExecuteTime,
+						bkashResponse: executedPaymentResult,
+					},
+				});
 
-        return {
-          redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=success`,
-        };
-      } else if (status === "failure") {
-        await tx.transaction.update({
-          where: {
-            bkashPaymentID: paymentId,
-          },
-          data: {
-            status: TransactionStatus.FAILED,
-            bkashResponse: executedPaymentResult,
-          },
-        });
-        return {
-          redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=failue`,
-        };
-      } else if (status === "cancel") {
-        await tx.transaction.update({
-          where: {
-            bkashPaymentID: paymentId,
-          },
-          data: {
-            status: TransactionStatus.CANCELLED,
-            bkashResponse: executedPaymentResult,
-          },
-        });
-        return {
-          executedPaymentResult,
-          redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=cancel`,
-        };
-      } else {
-        return {
-          executedPaymentResult,
-          redirectUrl: `${config.frontend_url}/dashboard/my-parcels?error=payment-failed`,
-        };
-      }
-    },
-    {
-      maxWait: 10000,
-      timeout: 30000,
-    },
-  );
+				return {
+					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=success`,
+				};
+			} else if (status === "failure") {
+				await tx.transaction.update({
+					where: {
+						bkashPaymentID: paymentId,
+					},
+					data: {
+						status: TransactionStatus.FAILED,
+						bkashResponse: executedPaymentResult,
+					},
+				});
+				return {
+					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=failue`,
+				};
+			} else if (status === "cancel") {
+				await tx.transaction.update({
+					where: {
+						bkashPaymentID: paymentId,
+					},
+					data: {
+						status: TransactionStatus.CANCELLED,
+						bkashResponse: executedPaymentResult,
+					},
+				});
+				return {
+					executedPaymentResult,
+					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=cancel`,
+				};
+			} else {
+				return {
+					executedPaymentResult,
+					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?error=payment-failed`,
+				};
+			}
+		},
+		{
+			maxWait: 10000,
+			timeout: 30000,
+		},
+	);
 
-  return transactionResult;
+	return transactionResult;
 };
 
 /**
@@ -389,182 +389,182 @@ const paymentCallback = async (query: Record<string, any>) => {
  * and already PAID; COD or unpaid-prepaid parcels are cancelled with no refund.
  */
 const cancelParcel = async (
-  parcelId: string,
-  userId: string,
-  cancelReason?: string,
+	parcelId: string,
+	userId: string,
+	cancelReason?: string,
 ) => {
-  const parcel = await prisma.parcel.findUnique({
-    where: { id: parcelId },
-    include: { merchant: true, transaction: true },
-  });
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: { merchant: true, transaction: true },
+	});
 
-  if (!parcel || parcel.isDeleted) {
-    throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
-  }
+	if (!parcel || parcel.isDeleted) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
 
-  // Ownership: only the owning merchant can cancel their parcel.
-  if (parcel.merchant.userId !== userId) {
-    throw new AppError(
-      httpStatus.FORBIDDEN,
-      "You do not have access to this parcel",
-    );
-  }
+	// Ownership: only the owning merchant can cancel their parcel.
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
+	}
 
-  if (parcel.status === ParcelStatus.CANCELLED) {
-    throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
-  }
+	if (parcel.status === ParcelStatus.CANCELLED) {
+		throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
+	}
 
-  // Cancellation is only allowed before pickup.
-  if (
-    parcel.status !== ParcelStatus.CREATED &&
-    parcel.status !== ParcelStatus.PICKUP_ASSIGNED
-  ) {
-    throw new AppError(
-      httpStatus.CONFLICT,
-      `A parcel can only be cancelled before pickup (while ${ParcelStatus.CREATED} or ${ParcelStatus.PICKUP_ASSIGNED}). Current status: ${parcel.status}`,
-    );
-  }
+	// Cancellation is only allowed before pickup.
+	if (
+		parcel.status !== ParcelStatus.CREATED &&
+		parcel.status !== ParcelStatus.PICKUP_ASSIGNED
+	) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`A parcel can only be cancelled before pickup (while ${ParcelStatus.CREATED} or ${ParcelStatus.PICKUP_ASSIGNED}). Current status: ${parcel.status}`,
+		);
+	}
 
-  const transaction = parcel.transaction;
+	const transaction = parcel.transaction;
 
-  // Refund only when the parcel is prepaid AND already paid.
-  const shouldRefund =
-    parcel.paymentType === PaymentType.PREPAID &&
-    transaction?.status === TransactionStatus.PAID;
+	// Refund only when the parcel is prepaid AND already paid.
+	const shouldRefund =
+		parcel.paymentType === PaymentType.PREPAID &&
+		transaction?.status === TransactionStatus.PAID;
 
-  let refundResult = null;
-  if (shouldRefund) {
-    if (!transaction?.bkashPaymentID || !transaction?.bkashTrxID) {
-      throw new AppError(
-        httpStatus.CONFLICT,
-        "Cannot refund: bKash payment/transaction id is missing on the paid transaction",
-      );
-    }
+	let refundResult = null;
+	if (shouldRefund) {
+		if (!transaction?.bkashPaymentID || !transaction?.bkashTrxID) {
+			throw new AppError(
+				httpStatus.CONFLICT,
+				"Cannot refund: bKash payment/transaction id is missing on the paid transaction",
+			);
+		}
 
-    refundResult = await refundBkashPayment({
-      paymentID: transaction.bkashPaymentID,
-      trxID: transaction.bkashTrxID,
-      amount: Number(transaction.amount),
-      sku: parcel.trackingId,
-      reason: cancelReason || "Parcel cancelled",
-    });
-  }
+		refundResult = await refundBkashPayment({
+			paymentID: transaction.bkashPaymentID,
+			trxID: transaction.bkashTrxID,
+			amount: Number(transaction.amount),
+			sku: parcel.trackingId,
+			reason: cancelReason || "Parcel cancelled",
+		});
+	}
 
-  // Persist the cancellation (+ refund/void bookkeeping) atomically.
-  const cancelledParcel = await prisma.$transaction(async (tx) => {
-    const updated = await tx.parcel.update({
-      where: { id: parcel.id },
-      data: {
-        status: ParcelStatus.CANCELLED,
-        cancelledAt: new Date(),
-        cancelledById: userId,
-        cancelReason: cancelReason ?? null,
-      },
-    });
+	// Persist the cancellation (+ refund/void bookkeeping) atomically.
+	const cancelledParcel = await prisma.$transaction(async (tx) => {
+		const updated = await tx.parcel.update({
+			where: { id: parcel.id },
+			data: {
+				status: ParcelStatus.CANCELLED,
+				cancelledAt: new Date(),
+				cancelledById: userId,
+				cancelReason: cancelReason ?? null,
+			},
+		});
 
-    if (transaction) {
-      if (shouldRefund) {
-        await tx.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: TransactionStatus.REFUNDED,
-            refundedAmount: transaction.amount,
-            refundedAt: refundResult?.completedTime ?? new Date().toISOString(),
-            refundReason: cancelReason ?? "Parcel cancelled",
-            refundTxID: refundResult?.refundTrxID,
-          },
-        });
-      } else if (transaction.status === TransactionStatus.PENDING) {
-        // Unpaid prepaid parcel — nothing was collected, so just void it.
-        await tx.transaction.update({
-          where: { id: transaction.id },
-          data: { status: TransactionStatus.CANCELLED },
-        });
-      }
-    }
+		if (transaction) {
+			if (shouldRefund) {
+				await tx.transaction.update({
+					where: { id: transaction.id },
+					data: {
+						status: TransactionStatus.REFUNDED,
+						refundedAmount: transaction.amount,
+						refundedAt: refundResult?.completedTime ?? new Date().toISOString(),
+						refundReason: cancelReason ?? "Parcel cancelled",
+						refundTxID: refundResult?.refundTrxID,
+					},
+				});
+			} else if (transaction.status === TransactionStatus.PENDING) {
+				// Unpaid prepaid parcel — nothing was collected, so just void it.
+				await tx.transaction.update({
+					where: { id: transaction.id },
+					data: { status: TransactionStatus.CANCELLED },
+				});
+			}
+		}
 
-    return updated;
-  });
+		return updated;
+	});
 
-  return {
-    parcel: cancelledParcel,
-    refunded: shouldRefund,
-    refundedAmount: shouldRefund ? Number(transaction!.amount) : 0,
-  };
+	return {
+		parcel: cancelledParcel,
+		refunded: shouldRefund,
+		refundedAmount: shouldRefund ? Number(transaction!.amount) : 0,
+	};
 };
 
 const getMyParcels = async (query: IQuery, userId: string) => {
-  const limit = query.limit ? Number(query.limit) : 10;
-  const page = query.page ? Number(query.page) : 1;
-  const skip = (page - 1) * limit;
-  const sortBy = query.sortBy ? query.sortBy : "createdAt";
-  const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+	const limit = query.limit ? Number(query.limit) : 10;
+	const page = query.page ? Number(query.page) : 1;
+	const skip = (page - 1) * limit;
+	const sortBy = query.sortBy ? query.sortBy : "createdAt";
+	const sortOrder = query.sortOrder ? query.sortOrder : "desc";
 
-  const isUserExists = await prisma.user.findUnique({
-    where: { id: userId },
-  });
+	const isUserExists = await prisma.user.findUnique({
+		where: { id: userId },
+	});
 
-  if (!isUserExists) {
-    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
-  }
+	if (!isUserExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+	}
 
-  const andConditions: ParcelWhereInput[] = [
-    {
-      merchant: {
-        userId,
-      },
-      isDeleted: false,
-    },
-  ];
+	const andConditions: ParcelWhereInput[] = [
+		{
+			merchant: {
+				userId,
+			},
+			isDeleted: false,
+		},
+	];
 
-  if (query.searchTerm) {
-    andConditions.push({
-      OR: [
-        {
-          trackingId: {
-            contains: query.searchTerm,
-            mode: "insensitive",
-          },
-        },
-      ],
-    });
-  }
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{
+					trackingId: {
+						contains: query.searchTerm,
+						mode: "insensitive",
+					},
+				},
+			],
+		});
+	}
 
-  if (query.status) {
-    andConditions.push({
-      status: query.status,
-    });
-  }
+	if (query.status) {
+		andConditions.push({
+			status: query.status,
+		});
+	}
 
-  const parcels = await prisma.parcel.findMany({
-    where: { AND: andConditions },
-    take: limit,
-    skip,
-    orderBy: { [sortBy]: sortOrder },
-    include: {
-      transaction: true,
-    },
-  });
+	const parcels = await prisma.parcel.findMany({
+		where: { AND: andConditions },
+		take: limit,
+		skip,
+		orderBy: { [sortBy]: sortOrder },
+		include: {
+			transaction: true,
+		},
+	});
 
-  const total = await prisma.parcel.count({
-    where: { AND: andConditions },
-  });
+	const total = await prisma.parcel.count({
+		where: { AND: andConditions },
+	});
 
-  return {
-    data: parcels,
-    meta: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
+	return {
+		data: parcels,
+		meta: {
+			page,
+			limit,
+			total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
 };
 
 export const ParcelService = {
-  createParcel,
-  initiateParcelPayment,
-  paymentCallback,
-  cancelParcel,
-  getMyParcels,
+	createParcel,
+	initiateParcelPayment,
+	paymentCallback,
+	cancelParcel,
+	getMyParcels,
 };

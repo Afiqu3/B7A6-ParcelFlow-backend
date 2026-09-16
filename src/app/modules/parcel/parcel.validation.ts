@@ -78,8 +78,7 @@ const CreateParcelZodValidationSchema = z
 	// Prepaid parcels must not carry a codAmount.
 	.refine(
 		(data) =>
-			data.paymentType !== PaymentType.PREPAID ||
-			data.codAmount === undefined,
+			data.paymentType !== PaymentType.PREPAID || data.codAmount === undefined,
 		{
 			error: "Prepaid parcels cannot have a COD amount",
 			path: ["codAmount"],

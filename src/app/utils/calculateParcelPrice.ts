@@ -1,5 +1,5 @@
 import httpStatus from "http-status";
-import {
+import type {
 	DeliveryType,
 	PaymentType,
 	PickupMode,
