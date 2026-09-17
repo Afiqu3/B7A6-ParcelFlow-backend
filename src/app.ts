@@ -16,6 +16,7 @@ import { UserRoutes } from "./app/modules/user/user.route";
 import { MerchantRoutes } from "./app/modules/merchant/merchant.route";
 import { PricingRuleRoutes } from "./app/modules/pricingRule/pricingRule.route";
 import { ParcelRoutes } from "./app/modules/parcel/parcel.route";
+import { AssignmentRoutes } from "./app/modules/assignment/assignment.route";
 
 const app: Application = express();
 
@@ -40,6 +41,7 @@ app.use("/api/v1/rider", RiderRoutes);
 app.use("/api/v1/merchant", MerchantRoutes);
 app.use("/api/v1/rule", PricingRuleRoutes);
 app.use("/api/v1/parcel", ParcelRoutes);
+app.use("/api/v1/assignment", AssignmentRoutes);
 
 // app.get("/test", async (req: Request, res: Response, next: NextFunction) => {
 //     try {
