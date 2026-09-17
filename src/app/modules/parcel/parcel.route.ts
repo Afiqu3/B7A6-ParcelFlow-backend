@@ -48,10 +48,32 @@ router.post(
 	ParcelController.cancelParcel,
 );
 
+router.post(
+	"/:parcelId/admin-cancel",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	validateRequest(ParcelValidation.CancelParcelByAdminZodValidationSchema),
+	ParcelController.cancelParcelByAdmin,
+);
+
 router.get(
 	"/:trackingId/track",
 	auth(Role.MERCHANT),
 	ParcelController.trackParcel,
+);
+
+router.get(
+	"/:parcelId/invoice",
+	auth(Role.MERCHANT),
+	ParcelController.downloadParcelInvoice,
+);
+
+router.patch(
+	"/:parcelId/status",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	validateRequest(
+		ParcelValidation.ParcelStatusUpdateByAdminZodValidationSchema,
+	),
+	ParcelController.parcelStatusUpdateByAdmin,
 );
 
 router.delete("/:parcelId", auth(Role.MERCHANT), ParcelController.deleteParcel);

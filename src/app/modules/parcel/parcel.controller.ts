@@ -169,15 +169,82 @@ const deleteParcel = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
+const downloadParcelInvoice = catchAsync(
+	async (req: Request, res: Response) => {
+		const parcelId = req.params.parcelId as string;
+		const userId = req.user?.userId;
+
+		if (!userId) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+		}
+
+		const pdfBuffer = await ParcelService.downloadParcelInvoice(
+			parcelId,
+			userId,
+		);
+
+		res.setHeader("Content-Type", "application/pdf");
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename="invoice-${parcelId}.pdf"`,
+		);
+		res.setHeader("Content-Length", pdfBuffer.length);
+		res.send(pdfBuffer);
+	},
+);
+
+const parcelStatusUpdateByAdmin = catchAsync(
+	async (req: Request, res: Response) => {
+		const parcelId = req.params.parcelId as string;
+		const payload = req.body;
+
+		const result = await ParcelService.parcelStatusUpdateByAdmin(
+			payload,
+			parcelId,
+		);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Parcel Status Updated Successfully",
+			data: result,
+		});
+	},
+);
+
+const cancelParcelByAdmin = catchAsync(async (req: Request, res: Response) => {
+	const parcelId = req.params.parcelId as string;
+	const userId = req.user?.userId;
+	const cancelReason = req.body.cancelReason as string | undefined;
+
+	if (!userId) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+	}
+
+	const result = await ParcelService.cancelParcelByAdmin(
+		parcelId,
+		userId,
+		cancelReason,
+	);
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Parcel cancelled Successfully",
+		data: result,
+	});
+});
+
 export const ParcelController = {
 	createParcel,
 	initiateParcelPayment,
 	paymentCallback,
 	cancelParcel,
+	cancelParcelByAdmin,
 	getMyParcels,
 	listParcels,
 	getSingleParcelAsAdmin,
 	getSingleParcelAsMerchant,
 	trackParcel,
 	deleteParcel,
+	downloadParcelInvoice,
+	parcelStatusUpdateByAdmin,
 };

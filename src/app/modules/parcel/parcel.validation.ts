@@ -95,6 +95,18 @@ const CreateParcelZodValidationSchema = z
 		},
 	);
 
+const ParcelStatusUpdateByAdminZodValidationSchema = z.object({
+	status: z.enum(["AT_HUB", "IN_TRANSIT"], {
+		error: "Status is required",
+	}),
+});
+
+const CancelParcelByAdminZodValidationSchema = z.object({
+	cancelReason: z.string().trim().max(500).optional(),
+});
+
 export const ParcelValidation = {
 	CreateParcelZodValidationSchema,
+	ParcelStatusUpdateByAdminZodValidationSchema,
+	CancelParcelByAdminZodValidationSchema,
 };

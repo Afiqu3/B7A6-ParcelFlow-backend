@@ -6,6 +6,7 @@ import {
 	PickupMode,
 	TransactionStatus,
 } from "../../../generated/prisma/enums";
+import PDFDocument from "pdfkit";
 import type { ParcelWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
 import type { IQuery } from "../../interfaces";
@@ -15,7 +16,17 @@ import { AppError } from "../../utils/AppError";
 import { calculateParcelPrice } from "../../utils/calculateParcelPrice";
 import { generateTrackingId } from "../../utils/generateTrackingId";
 import { refundBkashPayment } from "../../utils/refundBkashPayment";
-import type { ICreateParcelPayload } from "./parcel.interface";
+import type {
+	ICreateParcelPayload,
+	IParcelStatusUpdateByAdminPayload,
+} from "./parcel.interface";
+import { ADMIN_STATUS_TRANSITIONS } from "./parcel.constants";
+
+// Format a money value for the invoice; null/undefined -> "N/A".
+const money = (value: unknown, currency = "BDT"): string =>
+	value === null || value === undefined
+		? "N/A"
+		: `${currency} ${Number(value).toFixed(2)}`;
 
 const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
 	// ── 1. Resolve and validate the authenticated merchant ────
@@ -388,41 +399,21 @@ const paymentCallback = async (query: Record<string, any>) => {
  * CREATED or PICKUP_ASSIGNED. A refund is issued only when the parcel is PREPAID
  * and already PAID; COD or unpaid-prepaid parcels are cancelled with no refund.
  */
-const cancelParcel = async (
+// Shared cancellation core: refunds (prepaid + paid), voids an unpaid
+// transaction, and marks the parcel CANCELLED — atomically. Callers own the
+// auth / ownership / eligibility checks BEFORE calling this.
+const cancelParcelCore = async (
 	parcelId: string,
-	userId: string,
+	actorUserId: string,
 	cancelReason?: string,
 ) => {
 	const parcel = await prisma.parcel.findUnique({
 		where: { id: parcelId },
-		include: { merchant: true, transaction: true },
+		include: { transaction: true },
 	});
 
 	if (!parcel || parcel.isDeleted) {
 		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
-	}
-
-	// Ownership: only the owning merchant can cancel their parcel.
-	if (parcel.merchant.userId !== userId) {
-		throw new AppError(
-			httpStatus.FORBIDDEN,
-			"You do not have access to this parcel",
-		);
-	}
-
-	if (parcel.status === ParcelStatus.CANCELLED) {
-		throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
-	}
-
-	// Cancellation is only allowed before pickup.
-	if (
-		parcel.status !== ParcelStatus.CREATED &&
-		parcel.status !== ParcelStatus.PICKUP_ASSIGNED
-	) {
-		throw new AppError(
-			httpStatus.CONFLICT,
-			`A parcel can only be cancelled before pickup (while ${ParcelStatus.CREATED} or ${ParcelStatus.PICKUP_ASSIGNED}). Current status: ${parcel.status}`,
-		);
 	}
 
 	const transaction = parcel.transaction;
@@ -457,7 +448,7 @@ const cancelParcel = async (
 			data: {
 				status: ParcelStatus.CANCELLED,
 				cancelledAt: new Date(),
-				cancelledById: userId,
+				cancelledById: actorUserId,
 				cancelReason: cancelReason ?? null,
 			},
 		});
@@ -491,6 +482,79 @@ const cancelParcel = async (
 		refunded: shouldRefund,
 		refundedAmount: shouldRefund ? Number(transaction!.amount) : 0,
 	};
+};
+
+// Merchant cancel: only the owning merchant, only before pickup.
+const cancelParcel = async (
+	parcelId: string,
+	userId: string,
+	cancelReason?: string,
+) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: { merchant: true },
+	});
+
+	if (!parcel || parcel.isDeleted) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
+
+	// Ownership: only the owning merchant can cancel their parcel.
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
+	}
+
+	if (parcel.status === ParcelStatus.CANCELLED) {
+		throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
+	}
+
+	// Cancellation is only allowed before pickup.
+	if (
+		parcel.status !== ParcelStatus.CREATED &&
+		parcel.status !== ParcelStatus.PICKUP_ASSIGNED
+	) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`A parcel can only be cancelled before pickup (while ${ParcelStatus.CREATED} or ${ParcelStatus.PICKUP_ASSIGNED}). Current status: ${parcel.status}`,
+		);
+	}
+
+	return cancelParcelCore(parcelId, userId, cancelReason);
+};
+
+// Admin cancel: any parcel still in flight (not delivered/returned/cancelled).
+const cancelParcelByAdmin = async (
+	parcelId: string,
+	adminUserId: string,
+	cancelReason?: string,
+) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+	});
+
+	if (!parcel || parcel.isDeleted) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
+
+	if (parcel.status === ParcelStatus.CANCELLED) {
+		throw new AppError(httpStatus.CONFLICT, "Parcel is already cancelled");
+	}
+
+	const nonCancellable: ParcelStatus[] = [
+		ParcelStatus.DELIVERED,
+		ParcelStatus.RETURNED_TO_MERCHANT,
+	];
+	if (nonCancellable.includes(parcel.status)) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`A ${parcel.status} parcel can no longer be cancelled`,
+		);
+	}
+
+	return cancelParcelCore(parcelId, adminUserId, cancelReason);
 };
 
 const getMyParcels = async (query: IQuery, userId: string) => {
@@ -723,6 +787,13 @@ const deleteParcel = async (parcelId: string, userId: string) => {
 		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
 	}
 
+	if (parcel.transaction?.status === TransactionStatus.REFUNDED) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Cannot delete a refunded parcel — it has already been cancelled",
+		);
+	}
+
 	if (parcel.transaction?.status === TransactionStatus.PAID) {
 		throw new AppError(
 			httpStatus.CONFLICT,
@@ -754,15 +825,195 @@ const deleteParcel = async (parcelId: string, userId: string) => {
 	});
 };
 
+const downloadParcelInvoice = async (parcelId: string, userId: string) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: { merchant: true, transaction: true },
+	});
+
+	if (!parcel) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
+
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
+	}
+
+	if (parcel.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has been deleted");
+	}
+
+	const currency = parcel.transaction?.currency ?? "BDT";
+
+	const doc = new PDFDocument({ margin: 50, size: "A4" });
+	const pdfChunks: Buffer[] = [];
+
+	const pdfReadyPromise = new Promise<Buffer>((resolve, reject) => {
+		doc.on("data", (chunk: Buffer) => pdfChunks.push(chunk));
+		doc.on("end", () => resolve(Buffer.concat(pdfChunks)));
+		doc.on("error", reject);
+	});
+
+	// -- Header --------------------------------------------------
+	doc.fontSize(20).text("ParcelFlow", { align: "center" });
+	doc.fontSize(14).text("Parcel Invoice", { align: "center" });
+	doc.moveDown();
+
+	doc.fontSize(10);
+	if (parcel.transaction?.merchantInvoiceNumber) {
+		doc.text(`Invoice No: ${parcel.transaction.merchantInvoiceNumber}`);
+	}
+	doc.text(`Invoice Date: ${new Date().toISOString().slice(0, 10)}`);
+	doc.text(`Tracking ID: ${parcel.trackingId}`);
+	doc.text(`Status: ${parcel.status}`);
+	doc.moveDown();
+
+	// -- Merchant ------------------------------------------------
+	doc.fontSize(12).text("Merchant", { underline: true });
+	doc.fontSize(10);
+	doc.text(`Name: ${parcel.merchant.name}`);
+	if (parcel.merchant.businessName) {
+		doc.text(`Business: ${parcel.merchant.businessName}`);
+	}
+	doc.text(`Email: ${parcel.merchant.email}`);
+	doc.text(`Phone: ${parcel.merchant.phone}`);
+	doc.moveDown();
+
+	// -- Pickup --------------------------------------------------
+	doc.fontSize(12).text("Pickup", { underline: true });
+	doc.fontSize(10);
+	doc.text(
+		`Contact: ${parcel.pickupContactName} (${parcel.pickupContactPhone})`,
+	);
+	doc.text(`Address: ${parcel.pickupAddressLine}`);
+	doc.text(`District / City: ${parcel.pickupDistrict}, ${parcel.pickupCity}`);
+	doc.text(`Pickup Mode: ${parcel.pickupMode}`);
+	doc.moveDown();
+
+	// -- Delivery ------------------------------------------------
+	doc.fontSize(12).text("Delivery", { underline: true });
+	doc.fontSize(10);
+	doc.text(`Recipient: ${parcel.recipientName} (${parcel.recipientPhone})`);
+	doc.text(`Email: ${parcel.recipientEmail}`);
+	doc.text(`Address: ${parcel.deliveryAddressLine}`);
+	doc.text(
+		`District / City: ${parcel.deliveryDistrict}, ${parcel.deliveryCity}`,
+	);
+	doc.text(`Zone: ${parcel.deliveryZoneType}`);
+	doc.text(`Delivery Type: ${parcel.deliveryType}`);
+	doc.moveDown();
+
+	// -- Shipment ------------------------------------------------
+	doc.fontSize(12).text("Shipment", { underline: true });
+	doc.fontSize(10);
+	doc.text(`Category: ${parcel.parcelCategory}`);
+	doc.text(`Item: ${parcel.itemDescription}`);
+	doc.text(`Quantity: ${parcel.itemQuantity}`);
+	doc.text(`Weight: ${Number(parcel.weightKg).toFixed(2)} kg`);
+	doc.text(`Declared Value: ${money(parcel.declaredValue, currency)}`);
+	doc.moveDown();
+
+	// -- Charges -------------------------------------------------
+	doc.fontSize(12).text("Charges", { underline: true });
+	doc.fontSize(10);
+	doc.text(`Base Charge: ${money(parcel.baseCharge, currency)}`);
+	doc.text(`Weight Charge: ${money(parcel.weightCharge, currency)}`);
+	doc.text(
+		`Delivery Surcharge: ${money(parcel.deliveryTypeSurcharge, currency)}`,
+	);
+	doc.text(`Pickup Charge: ${money(parcel.pickupModeCharge, currency)}`);
+	if (parcel.paymentType === PaymentType.COD) {
+		doc.text(`COD Amount: ${money(parcel.codAmount, currency)}`);
+		doc.text(`COD Fee: ${money(parcel.codFee, currency)}`);
+	}
+	doc.moveDown(0.3);
+	doc
+		.fontSize(12)
+		.text(`Total Charge: ${money(parcel.totalCharge, currency)}`, {
+			align: "right",
+		});
+	doc.moveDown();
+
+	// -- Payment -------------------------------------------------
+	doc.fontSize(12).text("Payment", { underline: true });
+	doc.fontSize(10);
+	doc.text(`Payment Type: ${parcel.paymentType}`);
+	if (parcel.transaction) {
+		doc.text(`Transaction Status: ${parcel.transaction.status}`);
+		doc.text(
+			`Transaction Amount: ${money(parcel.transaction.amount, currency)}`,
+		);
+		if (parcel.transaction.paidAt) {
+			doc.text(`Paid At: ${parcel.transaction.paidAt}`);
+		}
+	}
+
+	doc.end();
+	const pdfBuffer = await pdfReadyPromise;
+
+	return pdfBuffer;
+};
+
+const parcelStatusUpdateByAdmin = async (
+	payload: IParcelStatusUpdateByAdminPayload,
+	parcelId: string,
+) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+	});
+
+	if (!parcel) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
+
+	if (parcel.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has been deleted");
+	}
+
+	// Reject any status the admin endpoint doesn't allow (defensive — even if
+	// the route's validateRequest is bypassed).
+	const allowedFrom = ADMIN_STATUS_TRANSITIONS[payload.status];
+	if (!allowedFrom) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			`Admins can only set status to: ${Object.keys(ADMIN_STATUS_TRANSITIONS).join(", ")}`,
+		);
+	}
+
+	// Enforce the state machine: only legal current -> next transitions.
+	if (
+		parcel.status !== payload.status &&
+		!allowedFrom.includes(parcel.status)
+	) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			`Cannot change status from ${parcel.status} to ${payload.status}`,
+		);
+	}
+
+	const updatedParcel = await prisma.parcel.update({
+		where: { id: parcelId },
+		data: { status: payload.status },
+	});
+
+	return updatedParcel;
+};
+
 export const ParcelService = {
 	createParcel,
 	initiateParcelPayment,
 	paymentCallback,
 	cancelParcel,
+	cancelParcelByAdmin,
 	getMyParcels,
 	listParcels,
 	getSingleParcelAsAdmin,
 	getSingleParcelAsMerchant,
 	trackParcel,
 	deleteParcel,
+	downloadParcelInvoice,
+	parcelStatusUpdateByAdmin,
 };

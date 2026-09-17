@@ -39,3 +39,7 @@ export interface ICreateParcelPayload {
 	paymentType: PaymentType;
 	codAmount?: number; // required (> 0) when paymentType === "COD"
 }
+
+export interface IParcelStatusUpdateByAdminPayload {
+	status: "AT_HUB" | "IN_TRANSIT";
+}
