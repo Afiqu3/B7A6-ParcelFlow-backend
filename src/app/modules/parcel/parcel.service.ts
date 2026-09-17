@@ -561,10 +561,128 @@ const getMyParcels = async (query: IQuery, userId: string) => {
 	};
 };
 
+const listParcels = async (query: IQuery) => {
+	const limit = query.limit ? Number(query.limit) : 10;
+	const page = query.page ? Number(query.page) : 1;
+	const skip = (page - 1) * limit;
+	const sortBy = query.sortBy ? query.sortBy : "createdAt";
+	const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+	const andConditions: ParcelWhereInput[] = [
+		{
+			isDeleted: false,
+		},
+	];
+
+	if (query.searchTerm) {
+		andConditions.push({
+			OR: [
+				{
+					trackingId: {
+						contains: query.searchTerm,
+						mode: "insensitive",
+					},
+				},
+			],
+		});
+	}
+
+	if (query.status) {
+		andConditions.push({
+			status: query.status,
+		});
+	}
+
+	const parcels = await prisma.parcel.findMany({
+		where: { AND: andConditions },
+		take: limit,
+		skip,
+		orderBy: { [sortBy]: sortOrder },
+		include: {
+			transaction: true,
+		},
+	});
+
+	const total = await prisma.parcel.count({
+		where: { AND: andConditions },
+	});
+
+	return {
+		data: parcels,
+		meta: {
+			page,
+			limit,
+			total,
+			totalPages: Math.ceil(total / limit),
+		},
+	};
+};
+
+const getSingleParcelAsAdmin = async (parcelId: string) => {
+	const idParcelExists = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+	});
+
+	if (!idParcelExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found");
+	}
+	if (idParcelExists.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has been deleted");
+	}
+
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: {
+			transaction: true,
+			merchant: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					phone: true,
+				},
+			},
+		},
+	});
+
+	return parcel;
+};
+
+const getSingleParcelAsMerchant = async (parcelId: string, userId: string) => {
+	const idParcelExists = await prisma.parcel.findUnique({
+		where: {
+			id: parcelId,
+			merchant: {
+				userId: userId,
+			},
+		},
+	});
+
+	if (!idParcelExists) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found");
+	}
+
+	if (idParcelExists.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has been deleted");
+	}
+
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: {
+			transaction: true,
+		},
+	});
+
+	return parcel;
+};
+
 export const ParcelService = {
 	createParcel,
 	initiateParcelPayment,
 	paymentCallback,
 	cancelParcel,
 	getMyParcels,
+	listParcels,
+	getSingleParcelAsAdmin,
+	getSingleParcelAsMerchant,
 };

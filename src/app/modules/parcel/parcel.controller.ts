@@ -82,11 +82,58 @@ const getMyParcels = catchAsync(async (req: Request, res: Response) => {
 	sendResponse(res, {
 		statusCode: httpStatus.OK,
 		success: true,
-		message: "Appointments Retrieved Successfully",
+		message: "Parcels Retrieved Successfully",
 		data,
 		meta,
 	});
 });
+
+const listParcels = catchAsync(async (req: Request, res: Response) => {
+	const { data, meta } = await ParcelService.listParcels(req.query);
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Parcels Retrieved Successfully",
+		data,
+		meta,
+	});
+});
+
+const getSingleParcelAsAdmin = catchAsync(
+	async (req: Request, res: Response) => {
+		const parcelId = req.params.parcelId as string;
+
+		const result = await ParcelService.getSingleParcelAsAdmin(parcelId);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Parcel Retrieved Successfully",
+			data: result,
+		});
+	},
+);
+
+const getSingleParcelAsMerchant = catchAsync(
+	async (req: Request, res: Response) => {
+		const parcelId = req.params.parcelId as string;
+		const userId = req.user?.userId;
+
+		if (!userId) {
+			throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+		}
+
+		const result = await ParcelService.getSingleParcelAsMerchant(
+			parcelId,
+			userId,
+		);
+		sendResponse(res, {
+			statusCode: httpStatus.OK,
+			success: true,
+			message: "Parcel Retrieved Successfully",
+			data: result,
+		});
+	},
+);
 
 export const ParcelController = {
 	createParcel,
@@ -94,4 +141,7 @@ export const ParcelController = {
 	paymentCallback,
 	cancelParcel,
 	getMyParcels,
+	listParcels,
+	getSingleParcelAsAdmin,
+	getSingleParcelAsMerchant,
 };
