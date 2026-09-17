@@ -48,4 +48,12 @@ router.post(
 	ParcelController.cancelParcel,
 );
 
+router.get(
+	"/:trackingId/track",
+	auth(Role.MERCHANT),
+	ParcelController.trackParcel,
+);
+
+router.delete("/:parcelId", auth(Role.MERCHANT), ParcelController.deleteParcel);
+
 export const ParcelRoutes = router;

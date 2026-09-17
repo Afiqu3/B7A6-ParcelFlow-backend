@@ -1,5 +1,9 @@
 import cron from "node-cron";
-import { RiderApplicationStatus, Role } from "../../generated/prisma/enums";
+import {
+	RiderApplicationStatus,
+	Role,
+	TransactionStatus,
+} from "../../generated/prisma/enums";
 import { prisma } from "./prisma";
 
 export const deleteUnverifiedRiders = async () => {
@@ -58,4 +62,41 @@ export const deleteRejectedRiders = async () => {
 		}
 		console.log("Rejected Rider Delete cron schedule (every 10 minutes)");
 	});
+};
+
+export const purgeDeletedParcels = () => {
+	cron.schedule(
+		"0 3 * * *",
+		async () => {
+			try {
+				const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+				const result = await prisma.parcel.deleteMany({
+					where: {
+						isDeleted: true,
+						deletedAt: { lt: oneMonthAgo },
+						OR: [
+							{ transaction: { is: null } },
+							{
+								transaction: {
+									status: {
+										notIn: [TransactionStatus.PAID, TransactionStatus.REFUNDED],
+									},
+								},
+							},
+						],
+					},
+				});
+
+				if (result.count > 0) {
+					console.log(
+						`Cron: Purged ${result.count} soft-deleted parcels older than 1 month`,
+					);
+				}
+			} catch (error) {
+				console.log("Cron: Failed to purge soft-deleted parcels", error);
+			}
+		},
+		{ timezone: "Asia/Dhaka" },
+	);
 };

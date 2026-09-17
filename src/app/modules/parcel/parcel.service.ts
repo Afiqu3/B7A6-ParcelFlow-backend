@@ -652,14 +652,21 @@ const getSingleParcelAsMerchant = async (parcelId: string, userId: string) => {
 	const idParcelExists = await prisma.parcel.findUnique({
 		where: {
 			id: parcelId,
-			merchant: {
-				userId: userId,
-			},
+		},
+		include: {
+			merchant: true,
 		},
 	});
 
 	if (!idParcelExists) {
 		throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found");
+	}
+
+	if (idParcelExists.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
 	}
 
 	if (idParcelExists.isDeleted) {
@@ -676,6 +683,77 @@ const getSingleParcelAsMerchant = async (parcelId: string, userId: string) => {
 	return parcel;
 };
 
+const trackParcel = async (trackingId: string, userId: string) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { trackingId },
+		include: {
+			transaction: true,
+			merchant: true,
+		},
+	});
+
+	if (!parcel) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel Not Found");
+	}
+
+	if (parcel.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has been deleted");
+	}
+
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You are not the owner of this parcel",
+		);
+	}
+
+	return {
+		status: parcel.status,
+		trackingId: parcel.trackingId,
+	};
+};
+
+const deleteParcel = async (parcelId: string, userId: string) => {
+	const parcel = await prisma.parcel.findUnique({
+		where: { id: parcelId },
+		include: { merchant: true, transaction: true },
+	});
+
+	if (!parcel) {
+		throw new AppError(httpStatus.NOT_FOUND, "Parcel not found");
+	}
+
+	if (parcel.transaction?.status === TransactionStatus.PAID) {
+		throw new AppError(
+			httpStatus.CONFLICT,
+			"Cannot delete a paid parcel — cancel it first to trigger a refund",
+		);
+	}
+
+	if (parcel.merchant.userId !== userId) {
+		throw new AppError(
+			httpStatus.FORBIDDEN,
+			"You do not have access to this parcel",
+		);
+	}
+
+	if (parcel.isDeleted) {
+		throw new AppError(httpStatus.GONE, "Parcel has already been deleted");
+	}
+
+	if (parcel.status !== ParcelStatus.CREATED) {
+		throw new AppError(
+			httpStatus.BAD_REQUEST,
+			"Only created parcels can be deleted",
+		);
+	}
+
+	await prisma.parcel.update({
+		where: { id: parcelId },
+		data: { isDeleted: true, deletedAt: new Date() },
+	});
+};
+
 export const ParcelService = {
 	createParcel,
 	initiateParcelPayment,
@@ -685,4 +763,6 @@ export const ParcelService = {
 	listParcels,
 	getSingleParcelAsAdmin,
 	getSingleParcelAsMerchant,
+	trackParcel,
+	deleteParcel,
 };

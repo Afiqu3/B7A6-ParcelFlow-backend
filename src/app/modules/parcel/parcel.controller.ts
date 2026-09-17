@@ -135,6 +135,40 @@ const getSingleParcelAsMerchant = catchAsync(
 	},
 );
 
+const trackParcel = catchAsync(async (req: Request, res: Response) => {
+	const trackingId = req.params.trackingId as string;
+	const userId = req.user?.userId;
+
+	if (!userId) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+	}
+
+	const result = await ParcelService.trackParcel(trackingId, userId);
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Parcel Tracking Retrieved Successfully",
+		data: result,
+	});
+});
+
+const deleteParcel = catchAsync(async (req: Request, res: Response) => {
+	const parcelId = req.params.parcelId as string;
+	const userId = req.user?.userId;
+
+	if (!userId) {
+		throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+	}
+
+	await ParcelService.deleteParcel(parcelId, userId);
+	sendResponse(res, {
+		statusCode: httpStatus.OK,
+		success: true,
+		message: "Parcel Deleted Successfully",
+		data: null,
+	});
+});
+
 export const ParcelController = {
 	createParcel,
 	initiateParcelPayment,
@@ -144,4 +178,6 @@ export const ParcelController = {
 	listParcels,
 	getSingleParcelAsAdmin,
 	getSingleParcelAsMerchant,
+	trackParcel,
+	deleteParcel,
 };
