@@ -15,6 +15,25 @@ const createAssignmentZodValidationSchema = z.object({
 	}),
 });
 
+const failAssignmentZodValidationSchema = z.object({
+	reason: z
+		.string({ error: "A failure reason is required" })
+		.trim()
+		.min(1, "A failure reason is required")
+		.max(500, "Reason is too long"),
+});
+
+const rejectAssignmentZodValidationSchema = z.object({
+	reason: z.string().trim().max(500, "Reason is too long").optional(),
+});
+
+const cancelAssignmentZodValidationSchema = z.object({
+	reason: z.string().trim().max(500, "Reason is too long").optional(),
+});
+
 export const AssignmentValidation = {
 	createAssignmentZodValidationSchema,
+	failAssignmentZodValidationSchema,
+	rejectAssignmentZodValidationSchema,
+	cancelAssignmentZodValidationSchema,
 };

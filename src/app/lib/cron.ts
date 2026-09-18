@@ -64,7 +64,7 @@ export const deleteRejectedRiders = async () => {
 	});
 };
 
-export const purgeDeletedParcels = () => {
+export const purgeDeletedParcels = async () => {
 	cron.schedule(
 		"0 3 * * *",
 		async () => {

@@ -87,4 +87,5 @@ enum AssignmentStatus {
     COMPLETED
     FAILED
     CANCELLED
+    REJECTED // rider declined the offer before accepting it
 }

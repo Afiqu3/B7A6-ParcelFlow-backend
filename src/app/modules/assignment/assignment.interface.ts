@@ -7,3 +7,15 @@ export interface ICreateAssignmentPayload {
 	// status (ASSIGNED), attemptNumber, and assignedById are set server-side —
 	// never accepted from the client.
 }
+
+export interface IFailAssignmentPayload {
+	reason: string;
+}
+
+export interface IRejectAssignmentPayload {
+	reason?: string;
+}
+
+export interface ICancelAssignmentPayload {
+	reason?: string;
+}

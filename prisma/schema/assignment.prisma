@@ -11,6 +11,7 @@ model Assignment {
     startedAt   DateTime?
     completedAt DateTime?
     failedAt    DateTime?
+    rejectedAt  DateTime?
     cancelledAt DateTime?
 
     failureReason String?

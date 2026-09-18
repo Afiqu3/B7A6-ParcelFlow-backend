@@ -1,6 +1,10 @@
 import app from "./app";
 import config from "./app/config";
-import { deleteRejectedRiders, deleteUnverifiedRiders } from "./app/lib/cron";
+import {
+	deleteRejectedRiders,
+	deleteUnverifiedRiders,
+	purgeDeletedParcels,
+} from "./app/lib/cron";
 import { prisma } from "./app/lib/prisma";
 import { redisClient } from "./app/lib/redis";
 import {
@@ -25,6 +29,7 @@ const main = async () => {
 
 		await deleteUnverifiedRiders();
 		await deleteRejectedRiders();
+		await purgeDeletedParcels();
 
 		app.listen(PORT, () => {
 			console.log(`Server is running on port ${PORT}`);
