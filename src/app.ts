@@ -18,6 +18,7 @@ import { PricingRuleRoutes } from "./app/modules/pricingRule/pricingRule.route";
 import { ParcelRoutes } from "./app/modules/parcel/parcel.route";
 import { AssignmentRoutes } from "./app/modules/assignment/assignment.route";
 import { StatsRoutes } from "./app/modules/stats/stats.route";
+import { TransactionRoutes } from "./app/modules/transaction/transaction.route";
 
 const app: Application = express();
 
@@ -43,6 +44,7 @@ app.use("/api/v1/merchant", MerchantRoutes);
 app.use("/api/v1/rule", PricingRuleRoutes);
 app.use("/api/v1/parcel", ParcelRoutes);
 app.use("/api/v1/assignment", AssignmentRoutes);
+app.use("/api/v1/transaction", TransactionRoutes);
 app.use("/api/v1/stats", StatsRoutes);
 
 // Basic route

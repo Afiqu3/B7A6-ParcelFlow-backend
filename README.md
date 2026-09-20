@@ -14,6 +14,7 @@ Backend API for **ParcelFlow**, a parcel delivery / courier service (Bangladesh 
 - **Riders** — application with document upload, email verification, admin approval, profile, block / unblock.
 - **Pricing rules** — per delivery zone × parcel category; charges are computed on the server and frozen onto each parcel.
 - **Parcels** — creation with server-side pricing, bKash payment + refund, cancellation, invoice PDF, admin status control.
+- **Transactions** — payment history and single-transaction lookup for merchants and admins, including pagination and filtering.
 - **Assignments** — pickup / delivery legs assigned to riders, with an accept → start → complete / fail / reject workflow.
 - **Dashboards** — analytics endpoints for admin, merchant, and rider, including 30-day trends.
 
@@ -60,6 +61,7 @@ src/
         ├── pricingRule/
         ├── parcel/
         ├── assignment/
+        ├── transaction/
         └── stats/
 
 prisma/

@@ -405,7 +405,25 @@ Effect on the parcel:
 
 ---
 
-## 9. Dashboard stats — `/api/v1/stats`
+## 9. Transactions — `/api/v1/transaction`
+
+Payment history and transaction lookup for merchants and admins.
+
+| Method | Path | Access | Description |
+| --- | --- | --- | --- |
+| GET | `/my-transactions` | 🏪 Merchant | List the merchant's own transactions |
+| GET | `/all-transactions` | 👑 Admin | List all platform transactions (filter: `merchantEmail`) |
+| GET | `/:paymentId` | 🏪 Merchant, 👑 Admin | Get a single transaction by payment id |
+
+**GET `/my-transactions`** returns the current merchant's payment history, including related parcel details and pagination metadata. It accepts the usual list query parameters: `page`, `limit`, `sortBy`, `sortOrder`.
+
+**GET `/all-transactions`** returns all transactions in the system for admins. You can filter by `merchantEmail` in the query string and use the standard list pagination parameters.
+
+**GET `/:paymentId`** fetches one transaction by its payment/transaction record id. Merchant users can only view their own transactions; admin users can access any transaction.
+
+---
+
+## 10. Dashboard stats — `/api/v1/stats`
 
 Read-only analytics for each role's dashboard. Every response includes totals, status breakdowns (zero-filled across all statuses), and 30-day daily trend arrays (`{ date, count }`, Asia/Dhaka days).
 
