@@ -124,11 +124,24 @@ const getSingleTransaction = async (paymentId: string, userId: string) => {
 		},
 	});
 
+	const existingUser = await prisma.user.findUnique({
+		where: {
+			id: userId
+		},
+		omit: {
+			password: true
+		}
+	});
+
+	if(!existingUser) {
+		throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+	}
+
 	if (!transaction) {
 		throw new AppError(httpStatus.NOT_FOUND, "transaction Not Found");
 	}
 
-	if (transaction.parcel.merchant.user.role === Role.MERCHANT) {
+	if (existingUser.role === Role.MERCHANT) {
 		if (transaction.parcel.merchant.user.id !== userId) {
 			throw new AppError(
 				httpStatus.FORBIDDEN,
