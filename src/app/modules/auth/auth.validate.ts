@@ -27,7 +27,7 @@ const MerchantRegistrationZodSchema = z.object({
 
 const MerchantEmailVerifyZodSchema = z.object({
 	email: z.email("Invalid email address").trim().toLowerCase(),
-	otp: z.string().length(6),
+	otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
 const LoginZodSchema = z.object({
@@ -52,7 +52,7 @@ const ResetPasswordZodSchema = z.object({
 			/[^A-Za-z0-9]/,
 			"Password must contain at least 1 Special Character",
 		),
-	otp: z.string().length(6),
+	otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
 });
 
 const ChangePasswordZodSchema = z.object({

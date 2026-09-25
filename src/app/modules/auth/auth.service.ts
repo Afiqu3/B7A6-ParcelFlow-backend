@@ -158,7 +158,8 @@ const verifyMerchantEmail = async (payload: IVerifyEmailPayload) => {
 				create: {
 					name: merchantPayload.name,
 					email: merchantPayload.email,
-					phone: merchantPayload.merchantProfile.phone ?? "",
+					phone: merchantPayload?.merchantProfile.phone ?? "",
+					businessName: merchantPayload?.merchantProfile?.businessName,
 				},
 			},
 		},
