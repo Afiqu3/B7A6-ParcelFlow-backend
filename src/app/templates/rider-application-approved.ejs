@@ -87,6 +87,14 @@
             text-decoration: none;
         }
 
+        .password-box {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0 24px;
+            border-left: 4px solid #f97316;
+        }
+
         @media only screen and (max-width: 600px) {
             .container {
                 margin: 20px;
@@ -123,6 +131,16 @@
                     view assigned parcels, manage your deliveries, and start earning.
                 </p>
             </div>
+            <div class="password-box">
+                <div class="password-label">Your temporary password</div>
+                <div class="password-value">
+                    <%= password %>
+                </div>
+            </div>
+            <p style="font-size: 14px; color: #475569; margin-top: -10px;">
+                You will use this password to log in <em>after</em> your application is reviewed and approved.
+                For security, you'll be asked to change it on your first login.
+            </p>
             <p>
                 To get started, click the button below to log in to your account. Your email address is already
                 verified — just use the password you set during your application.
