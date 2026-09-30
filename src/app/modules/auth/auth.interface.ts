@@ -10,7 +10,7 @@ export interface IRegisterMerchantPayload {
 	name: string;
 	email: string;
 	password: string;
-	merchantProfile: IMerchantProfile;
+	merchantProfile?: IMerchantProfile;
 }
 
 interface IMerchantProfile {

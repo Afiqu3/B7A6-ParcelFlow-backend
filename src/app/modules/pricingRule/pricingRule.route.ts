@@ -16,7 +16,6 @@ router.post(
 
 router.get(
 	"/",
-	auth(Role.ADMIN, Role.SUPER_ADMIN),
 	PricingRuleController.getAllPricingRules,
 );
 
