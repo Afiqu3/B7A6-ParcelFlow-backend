@@ -1,32 +1,32 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, {
-	type Application,
-	type Request,
-	type Response,
+    type Application,
+    type Request,
+    type Response,
 } from "express";
 import httpStatus from "http-status";
 import config from "./app/config";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
 import { AdminRoutes } from "./app/modules/admin/admin.route";
-import { AuthRoutes } from "./app/modules/auth/auth.route";
-import { RiderRoutes } from "./app/modules/rider/rider.route";
-import { UserRoutes } from "./app/modules/user/user.route";
-import { MerchantRoutes } from "./app/modules/merchant/merchant.route";
-import { PricingRuleRoutes } from "./app/modules/pricingRule/pricingRule.route";
-import { ParcelRoutes } from "./app/modules/parcel/parcel.route";
 import { AssignmentRoutes } from "./app/modules/assignment/assignment.route";
+import { AuthRoutes } from "./app/modules/auth/auth.route";
+import { MerchantRoutes } from "./app/modules/merchant/merchant.route";
+import { ParcelRoutes } from "./app/modules/parcel/parcel.route";
+import { PricingRuleRoutes } from "./app/modules/pricingRule/pricingRule.route";
+import { RiderRoutes } from "./app/modules/rider/rider.route";
 import { StatsRoutes } from "./app/modules/stats/stats.route";
 import { TransactionRoutes } from "./app/modules/transaction/transaction.route";
+import { UserRoutes } from "./app/modules/user/user.route";
 
 const app: Application = express();
 
 app.use(
-	cors({
-		origin: config.frontend_url,
-		credentials: true,
-	}),
+    cors({
+        origin: config.frontend_url,
+        credentials: true,
+    }),
 );
 
 // Enable URL-encoded form data parsing
@@ -49,10 +49,10 @@ app.use("/api/v1/stats", StatsRoutes);
 
 // Basic route
 app.get("/", async (req: Request, res: Response) => {
-	res.status(httpStatus.OK).json({
-		success: true,
-		message: "Welcome to ParcelFlow System Backend",
-	});
+    res.status(httpStatus.OK).json({
+        success: true,
+        message: "Welcome to ParcelFlow System Backend",
+    });
 });
 
 app.use(globalErrorHandler);

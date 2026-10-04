@@ -6,7 +6,6 @@ export interface ILoginUserPayload {
 }
 
 export interface IRegisterMerchantPayload {
-	id: string;
 	name: string;
 	email: string;
 	password: string;
