@@ -13,8 +13,8 @@ const applyAsRiderZodSchema = z.object({
 			.trim()
 			.min(5, "Address must be at least 5 characters long")
 			.optional(),
-		nid: z.string("Provide your phone number"),
-		licenseNumber: z.string("Provide your phone number"),
+		nid: z.string("Provide your nid number"),
+		licenseNumber: z.string("Provide your driving license number"),
 		vehicleType: z.enum(
 			["BIKE", "BICYCLE", "VAN"],
 			"Vehicle type must be BIKE or BICYCLE or VAN",

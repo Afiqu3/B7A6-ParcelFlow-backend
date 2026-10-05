@@ -1,148 +1,151 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import config from "../../config";
 import { AppError } from "../../utils/AppError";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { RiderService } from "./rider.service";
 import { RiderValidation } from "./rider.validation";
-import config from "../../config";
 
 const applyAsRider = catchAsync(async (req: Request, res: Response) => {
-	const files = req.files as { [fieldName: string]: Express.Multer.File[] };
-	const vehiclePaper = files.vehiclePaper[0];
+    const files = req.files as { [fieldName: string]: Express.Multer.File[] };
+    const vehiclePaper = files.vehiclePaper[0];
 
-	const zodValidationResult = RiderValidation.applyAsRiderZodSchema.safeParse(
-		JSON.parse(req.body.data),
-	);
+    const zodValidationResult = RiderValidation.applyAsRiderZodSchema.safeParse(
+        JSON.parse(req.body.data),
+    );
 
-	if (!zodValidationResult.success) {
-		throw new AppError(
-			httpStatus.BAD_REQUEST,
-			zodValidationResult.error.issues[0].message,
-		);
-	}
+    if (!zodValidationResult.success) {
+        throw new AppError(
+            httpStatus.BAD_REQUEST,
+            zodValidationResult.error.issues[0].message,
+        );
+    }
 
-	const payload = zodValidationResult.data;
+    const payload = zodValidationResult.data;
 
-	const result = await RiderService.applyAsRider(payload, vehiclePaper);
+    const result = await RiderService.applyAsRider(payload, vehiclePaper);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Applied As Doctor Successfully",
-		data: result,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Applied As Doctor Successfully",
+        data: result,
+    });
 });
 
 const verifyRiderEmail = catchAsync(async (req: Request, res: Response) => {
-	const payload = req.body;
+    const payload = req.body;
 
-	const result = await RiderService.verifyRiderEmail(payload);
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Rider Email Verified Successfully",
-		data: result,
-	});
+    const result = await RiderService.verifyRiderEmail(payload);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Rider Email Verified Successfully",
+        data: result,
+    });
 });
 
 const getAllRider = catchAsync(async (req: Request, res: Response) => {
-	const { data, meta } = await RiderService.getAllRider(req.query);
+    const { data, meta } = await RiderService.getAllRider(req.query);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Riders Retrieved Successfully",
-		data: data,
-		meta: meta,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Riders Retrieved Successfully",
+        data: data,
+        meta: meta,
+    });
 });
 
 const getRiderProfile = catchAsync(async (req: Request, res: Response) => {
-	const riderId = req.params.riderId;
+    const riderId = req.params.riderId;
 
-	const result = await RiderService.getRiderProfile(riderId as string);
+    const result = await RiderService.getRiderProfile(riderId as string);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Rider Profile Retrieved Successfully",
-		data: result,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Rider Profile Retrieved Successfully",
+        data: result,
+    });
 });
 
 const approveRider = catchAsync(async (req: Request, res: Response) => {
-	const payload = req.body;
-	const reviewerId = req.user?.userId as string;
+    const payload = req.body;
+    const reviewerId = req.user?.userId as string;
 
-	const result = await RiderService.approveRider(payload, reviewerId);
+    const result = await RiderService.approveRider(payload, reviewerId);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Rider Application Reviewed Successfully",
-		data: result,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Rider Application Reviewed Successfully",
+        data: result,
+    });
 });
 
 const updateRiderProfile = catchAsync(async (req: Request, res: Response) => {
-	const { updatedRider, accessToken, refreshToken } =
-		await RiderService.updateRiderProfile(req.body, req.user?.userId as string);
+    const { updatedRider, accessToken, refreshToken } =
+        await RiderService.updateRiderProfile(
+            req.body,
+            req.user?.userId as string,
+        );
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: config.node_env === "development" ? false : true,
-		sameSite: config.node_env === "development" ? "lax" : "none",
-		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-	});
-	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true,
-		secure: config.node_env === "development" ? false : true,
-		sameSite: config.node_env === "development" ? "lax" : "none",
-		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-	});
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.node_env === "development" ? false : true,
+        sameSite: config.node_env === "development" ? "lax" : "none",
+        maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+    });
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.node_env === "development" ? false : true,
+        sameSite: config.node_env === "development" ? "lax" : "none",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    });
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Profile updated Successfully",
-		data: { accessToken, refreshToken, updatedRider },
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Profile updated Successfully",
+        data: { accessToken, refreshToken, updatedRider },
+    });
 });
 
 const updateRiderStatus = catchAsync(async (req: Request, res: Response) => {
-	const data = await RiderService.updateRiderStatus(
-		req.params.userId as string,
-	);
+    const data = await RiderService.updateRiderStatus(
+        req.params.userId as string,
+    );
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Rider status updated Successfully",
-		data: data,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Rider status updated Successfully",
+        data: data,
+    });
 });
 
 const showProfile = catchAsync(async (req: Request, res: Response) => {
-	const userId = req.user?.userId;
+    const userId = req.user?.userId;
 
-	const result = await RiderService.showProfile(userId as string);
+    const result = await RiderService.showProfile(userId as string);
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Your Profile Retrieved Successfully",
-		data: result,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Your Profile Retrieved Successfully",
+        data: result,
+    });
 });
 
 export const RiderController = {
-	applyAsRider,
-	verifyRiderEmail,
-	getAllRider,
-	getRiderProfile,
-	approveRider,
-	updateRiderProfile,
-	updateRiderStatus,
-	showProfile,
+    applyAsRider,
+    verifyRiderEmail,
+    getAllRider,
+    getRiderProfile,
+    approveRider,
+    updateRiderProfile,
+    updateRiderStatus,
+    showProfile,
 };
