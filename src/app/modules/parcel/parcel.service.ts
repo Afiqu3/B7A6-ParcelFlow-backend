@@ -348,7 +348,7 @@ const paymentCallback = async (query: Record<string, any>) => {
 				});
 
 				return {
-					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=success`,
+					redirectUrl: `${config.frontend_url}/dashboard/parcels?status=success`,
 				};
 			} else if (status === "failure") {
 				await tx.transaction.update({
@@ -361,7 +361,7 @@ const paymentCallback = async (query: Record<string, any>) => {
 					},
 				});
 				return {
-					redirectUrl: `${config.frontend_url}/dashboard/my-parcels?status=failue`,
+					redirectUrl: `${config.frontend_url}/dashboard/parcels?status=failure`,
 				};
 			} else if (status === "cancel") {
 				await tx.transaction.update({
