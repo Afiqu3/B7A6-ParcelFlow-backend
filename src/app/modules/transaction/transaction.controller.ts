@@ -36,28 +36,28 @@ const getAllTransactions = catchAsync(async (req: Request, res: Response) => {
 	});
 });
 
-const getSingleTransaction = catchAsync(async (req: Request, res: Response) => {
-	const paymentId = req.params.paymentId as string;
-	const userId = req.user?.userId;
+// const getSingleTransaction = catchAsync(async (req: Request, res: Response) => {
+// 	const paymentId = req.params.paymentId as string;
+// 	const userId = req.user?.userId;
 
-	if (!userId) {
-		throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
-	}
+// 	if (!userId) {
+// 		throw new AppError(httpStatus.UNAUTHORIZED, "No User found!");
+// 	}
 
-	const result = await TransactionService.getSingleTransaction(
-		paymentId,
-		userId,
-	);
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Payment Retrieved Successfully",
-		data: result,
-	});
-});
+// 	const result = await TransactionService.getSingleTransaction(
+// 		paymentId,
+// 		userId,
+// 	);
+// 	sendResponse(res, {
+// 		statusCode: httpStatus.OK,
+// 		success: true,
+// 		message: "Payment Retrieved Successfully",
+// 		data: result,
+// 	});
+// });
 
 export const TransactionController = {
 	getMyTransactions,
 	getAllTransactions,
-	getSingleTransaction,
+	// getSingleTransaction,
 };

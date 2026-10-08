@@ -17,10 +17,10 @@ router.get(
 	TransactionController.getAllTransactions,
 );
 
-router.get(
-	"/:paymentId",
-	auth(Role.MERCHANT, Role.ADMIN, Role.SUPER_ADMIN),
-	TransactionController.getSingleTransaction,
-);
+// router.get(
+// 	"/:paymentId",
+// 	auth(Role.MERCHANT, Role.ADMIN, Role.SUPER_ADMIN),
+// 	TransactionController.getSingleTransaction,
+// );
 
 export const TransactionRoutes = router;
