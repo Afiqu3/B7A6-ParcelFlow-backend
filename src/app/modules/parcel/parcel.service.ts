@@ -653,6 +653,13 @@ const listParcels = async (query: IQuery) => {
         },
     ];
 
+    andConditions.push({
+        OR: [
+            { transaction: { is: null } },
+            { transaction: { status: TransactionStatus.PAID } },
+        ],
+    });
+
     if (query.searchTerm) {
         andConditions.push({
             OR: [

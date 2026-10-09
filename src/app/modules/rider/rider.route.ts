@@ -9,54 +9,60 @@ import { RiderValidation } from "./rider.validation";
 const router = Router();
 
 router.post(
-	"/apply",
-	upload.fields([
-		{
-			name: "vehiclePaper",
-			maxCount: 1,
-		},
-	]),
-	RiderController.applyAsRider,
+    "/apply",
+    upload.fields([
+        {
+            name: "vehiclePaper",
+            maxCount: 1,
+        },
+    ]),
+    RiderController.applyAsRider,
 );
 
 router.post(
-	"/apply/verify-email",
-	validateRequest(RiderValidation.riderEmailValidationSchema),
-	RiderController.verifyRiderEmail,
+    "/apply/verify-email",
+    validateRequest(RiderValidation.riderEmailValidationSchema),
+    RiderController.verifyRiderEmail,
 );
 
 router.get(
-	"/",
-	auth(Role.ADMIN, Role.SUPER_ADMIN),
-	RiderController.getAllRider,
+    "/",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    RiderController.getAllRider,
+);
+
+router.get(
+    "/available",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    RiderController.getAllAvailableRider,
 );
 
 router.get("/profile", auth(Role.RIDER), RiderController.showProfile);
 
 router.post(
-	"/approve",
-	auth(Role.ADMIN, Role.SUPER_ADMIN),
-	validateRequest(RiderValidation.approveRiderValidationSchema),
-	RiderController.approveRider,
+    "/approve",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    validateRequest(RiderValidation.approveRiderValidationSchema),
+    RiderController.approveRider,
 );
 
 router.patch(
-	"/update-profile",
-	auth(Role.RIDER),
-	validateRequest(RiderValidation.updateRiderValidationSchema),
-	RiderController.updateRiderProfile,
+    "/update-profile",
+    auth(Role.RIDER),
+    validateRequest(RiderValidation.updateRiderValidationSchema),
+    RiderController.updateRiderProfile,
 );
 
 router.get(
-	"/:riderId",
-	auth(Role.ADMIN, Role.SUPER_ADMIN),
-	RiderController.getRiderProfile,
+    "/:riderId",
+    auth(Role.ADMIN, Role.SUPER_ADMIN),
+    RiderController.getRiderProfile,
 );
 
 router.patch(
-	"/:userId/status",
-	auth(Role.SUPER_ADMIN, Role.ADMIN),
-	RiderController.updateRiderStatus,
+    "/:userId/status",
+    auth(Role.SUPER_ADMIN, Role.ADMIN),
+    RiderController.updateRiderStatus,
 );
 
 export const RiderRoutes = router;

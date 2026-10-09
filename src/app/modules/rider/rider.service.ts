@@ -20,6 +20,7 @@ import { redisClient } from "../../lib/redis";
 import { AppError } from "../../utils/AppError";
 import { jwtUtils } from "../../utils/jwt";
 import generateRandomPassword from "../../utils/randomPassword";
+import { ACTIVE_ASSIGNMENT_STATUSES } from "../assignment/assignment.constants";
 import type {
     IApplyAsRiderPayload,
     IApproveRiderPayload,
@@ -253,6 +254,78 @@ const getAllRider = async (query: IQuery) => {
     }
 
     andConditions.push({ user: { role: Role.RIDER }, isDeleted: false });
+
+    const allRiders = await prisma.riderProfile.findMany({
+        where: {
+            AND: andConditions.length > 0 ? andConditions : undefined,
+        },
+
+        take: limit,
+        skip: skip,
+
+        orderBy: {
+            // sortBy : sortOrder
+            [sortBy]: sortOrder,
+        },
+
+        include: {
+            user: {
+                omit: {
+                    password: true,
+                },
+            },
+        },
+    });
+
+    const totalRiderCount = await prisma.riderProfile.count({
+        where: {
+            AND: andConditions,
+        },
+    });
+
+    return {
+        data: allRiders,
+        meta: {
+            page: page,
+            limit: limit,
+            total: totalRiderCount,
+            totalPages: Math.ceil(totalRiderCount / limit),
+        },
+    };
+};
+
+const getAllAvailableRider = async (query: IQuery) => {
+    const limit = query.limit ? Number(query.limit) : 10;
+    const page = query.page ? Number(query.page) : 1;
+    const skip = (page - 1) * limit;
+    const sortBy = query.sortBy ? query.sortBy : "createdAt";
+    const sortOrder = query.sortOrder ? query.sortOrder : "desc";
+
+    const andConditions: RiderProfileWhereInput[] = [
+        {
+            applicationStatus: RiderApplicationStatus.APPROVED,
+            isDeleted: false,
+            user: {
+                role: Role.RIDER,
+                status: AccountStatus.ACTIVE,
+                emailVerified: true,
+                isDeleted: false,
+            },
+            // core: no ongoing assignment
+            assignments: {
+                none: { status: { in: ACTIVE_ASSIGNMENT_STATUSES } },
+            },
+        },
+    ];
+
+    if (query.searchTerm) {
+        andConditions.push({
+            OR: [
+                { name: { contains: query.searchTerm, mode: "insensitive" } },
+                { email: { contains: query.searchTerm, mode: "insensitive" } },
+            ],
+        });
+    }
 
     const allRiders = await prisma.riderProfile.findMany({
         where: {
@@ -575,6 +648,7 @@ export const RiderService = {
     applyAsRider,
     verifyRiderEmail,
     getAllRider,
+    getAllAvailableRider,
     getRiderProfile,
     approveRider,
     updateRiderProfile,
