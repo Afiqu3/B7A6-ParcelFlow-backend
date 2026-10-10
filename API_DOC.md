@@ -186,6 +186,7 @@ All fields optional.
 | POST | `/apply` | 🌐 Public | Apply as a rider (with document upload) |
 | POST | `/apply/verify-email` | 🌐 Public | Verify the application email with an OTP |
 | GET | `/` | 👑 Admin | List riders (filters: `email`, `licenseNumber`, `applicationStatus`) |
+| GET | `/available` | 👑 Admin | List available riders (approved, active, no ongoing assignment) |
 | GET | `/profile` | 🛵 Rider | Get the current rider's profile |
 | POST | `/approve` | 👑 Admin | Approve or reject an application |
 | PATCH | `/update-profile` | 🛵 Rider | Update own profile (returns new tokens) |
@@ -226,6 +227,8 @@ All fields optional.
 { "name": "Rider One", "phone": "01800000000", "address": "New address" }
 ```
 All fields optional.
+
+**GET `/available`** — same pagination/search as `GET /`. Returns only riders with `applicationStatus: APPROVED`, `isDeleted: false`, linked user `ACTIVE` + `emailVerified` + not deleted, and **no** assignment in `ASSIGNED` / `ACCEPTED` / `IN_PROGRESS`.
 
 ---
 
@@ -277,7 +280,7 @@ A rule is unique per (`zoneType`, `parcelCategory`).
 | GET | `/:trackingId/track` | 🏪 Merchant | Get a parcel's current status by tracking id |
 | GET | `/:parcelId/invoice` | 🏪 Merchant | Download the parcel invoice (PDF) |
 | DELETE | `/:parcelId` | 🏪 Merchant | Soft-delete a parcel (only while `CREATED`) |
-| GET | `/` | 👑 Admin | List all parcels (filter: `status`; search by tracking id) |
+| GET | `/` | 👑 Admin | List operational parcels — COD (no transaction) or `PREPAID` + `PAID` only (filter: `status`; search by tracking id) |
 | GET | `/:parcelId` | 👑 Admin | Get any parcel by id |
 | PATCH | `/:parcelId/status` | 👑 Admin | Update hub status (`AT_HUB` / `IN_TRANSIT`) |
 | POST | `/:parcelId/admin-cancel` | 👑 Admin | Cancel any in-flight parcel (refunds if applicable) |
@@ -370,6 +373,7 @@ The pickup/delivery workflow. Admins assign a rider to a parcel leg; the rider t
 - `leg`: `PICKUP` (parcel must be `CREATED`) | `DELIVERY` (parcel must be `AT_HUB` or `DELIVERY_FAILED`).
 - Prepaid parcels must be paid first.
 - Only one active assignment per parcel + leg at a time.
+- Rider must have no other active assignment (`ASSIGNED` / `ACCEPTED` / `IN_PROGRESS`), else `409`. Use `GET /rider/available` to pick a free rider.
 - A rider who has already **rejected** this parcel + leg cannot be assigned to it again.
 
 **PATCH `/:assignmentId/fail`**

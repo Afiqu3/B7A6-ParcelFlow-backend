@@ -11,11 +11,11 @@ Backend API for **ParcelFlow**, a parcel delivery / courier service (Bangladesh 
 - **Authentication** — email + password with OTP email verification, Google sign-in, JWT access/refresh tokens, forgot / reset / change password.
 - **Roles** — `SUPER_ADMIN`, `ADMIN`, `MERCHANT`, `RIDER`, each with its own permissions.
 - **Merchants** — self-registration, profile, admin management (block / unblock).
-- **Riders** — application with document upload, email verification, admin approval, profile, block / unblock.
+- **Riders** — application with document upload, email verification, admin approval, profile, block / unblock. `GET /rider/available` lists only approved + active riders with no ongoing (`ASSIGNED` / `ACCEPTED` / `IN_PROGRESS`) assignment.
 - **Pricing rules** — per delivery zone × parcel category; charges are computed on the server and frozen onto each parcel.
-- **Parcels** — creation with server-side pricing, bKash payment + refund, cancellation, invoice PDF, admin status control.
+- **Parcels** — creation with server-side pricing, bKash payment + refund, cancellation, invoice PDF, admin status control. Admin list (`GET /parcel`) returns only operational parcels: COD (no transaction) or `PREPAID` + `PAID`.
 - **Transactions** — payment history and single-transaction lookup for merchants and admins, including pagination and filtering.
-- **Assignments** — pickup / delivery legs assigned to riders, with an accept → start → complete / fail / reject workflow.
+- **Assignments** — pickup / delivery legs assigned to riders, with an accept → start → complete / fail / reject workflow. One active assignment per rider is enforced at creation (`409` if busy).
 - **Dashboards** — analytics endpoints for admin, merchant, and rider, including 30-day trends.
 
 ---
