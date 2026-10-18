@@ -209,7 +209,7 @@ All fields optional.
   }
 }
 ```
-`vehicleType`: `BIKE` | `BICYCLE` | `VAN`. `address` is optional. A temporary password is emailed to the rider.
+`vehicleType`: `BIKE` | `BICYCLE` | `VAN`. `address` is required. A temporary password is emailed to the rider.
 
 **POST `/apply/verify-email`**
 ```json

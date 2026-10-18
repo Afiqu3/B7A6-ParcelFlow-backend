@@ -10,7 +10,7 @@ export interface IApplyAsRiderPayload {
 	};
 	riderProfile: {
 		phone: string;
-		address?: string;
+		address: string;
 		nid: string;
 		licenseNumber: string;
 		vehicleType: VehicleType;

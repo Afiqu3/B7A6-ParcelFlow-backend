@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import httpStatus from "http-status";
-import { Role } from "../../generated/prisma/enums";
+import { RiderApplicationStatus, Role, VehicleType } from "../../generated/prisma/enums";
 import config from "../config";
 import { prisma } from "../lib/prisma";
 import { AppError } from "./AppError";
@@ -146,13 +146,18 @@ export const seedTesterRider = async () => {
 				role: Role.RIDER,
 				mustChangePassword: false,
 				emailVerified: true,
-				// merchantProfile: {
-				// 	create: {
-				// 		email,
-				// 		name,
-				// 		phone: "01712345678",
-				// 	},
-				// },
+				riderProfile: {
+					create: {
+						name,
+						email,
+						phone: "01800000000",
+						address: "House 12, Road 5, Dhanmondi, Dhaka",
+						nid: "0000000000",
+						licenseNumber: "DEMO-RIDER-LICENSE-001",
+						vehicleType: VehicleType.BIKE,
+						applicationStatus: RiderApplicationStatus.APPROVED,
+					},
+				},
 			},
 		});
 

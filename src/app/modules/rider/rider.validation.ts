@@ -11,8 +11,7 @@ const applyAsRiderZodSchema = z.object({
 		address: z
 			.string()
 			.trim()
-			.min(5, "Address must be at least 5 characters long")
-			.optional(),
+			.min(5, "Address must be at least 5 characters long"),
 		nid: z.string().trim().regex(/^(\d{10}|\d{13}|\d{17})$/, "Enter a valid NID number"),
 		licenseNumber: z.string("Provide your driving license number"),
 		vehicleType: z.enum(
