@@ -25,8 +25,8 @@ model Assignment {
     riderId String
     rider   RiderProfile @relation(fields: [riderId], references: [id], onDelete: Restrict)
 
-    assignedById String?
-    assignedBy   User?   @relation("AssignedByAdmin", fields: [assignedById], references: [id])
+    assignedById String
+    assignedBy   User   @relation("AssignedByAdmin", fields: [assignedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
     @@index([parcelId, leg])
     @@index([riderId, status])
