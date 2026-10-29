@@ -20,6 +20,9 @@ model PricingRule {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
+    createdById String
+    createdBy   User   @relation("PricingRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
     @@unique([zoneType, parcelCategory])
     @@index([zoneType, parcelCategory, isActive])
     @@map("pricing_rules")

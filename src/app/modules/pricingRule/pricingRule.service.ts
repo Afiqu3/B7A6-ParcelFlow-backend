@@ -6,7 +6,10 @@ import type {
 	IUpdatePricingRulePayload,
 } from "./pricingRule.interface";
 
-const createPricingRule = async (payload: ICreatePricingRulePayload) => {
+const createPricingRule = async (
+	payload: ICreatePricingRulePayload,
+	createdById: string,
+) => {
 	const isPricingRuleExists = await prisma.pricingRule.findFirst({
 		where: {
 			name: payload.name,
@@ -48,10 +51,12 @@ const createPricingRule = async (payload: ICreatePricingRulePayload) => {
 	const newPricingRule = await prisma.pricingRule.create({
 		data: {
 			...payload,
+			createdById,
 		},
 	});
 	return newPricingRule;
 };
+
 
 const updatePricingRule = async (
 	payload: IUpdatePricingRulePayload,

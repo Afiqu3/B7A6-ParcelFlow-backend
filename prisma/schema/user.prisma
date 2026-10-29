@@ -19,6 +19,7 @@ model User {
     merchantProfile MerchantProfile?
     riderProfile    RiderProfile?
     assignmentsMade Assignment[]     @relation("AssignedByAdmin")
+    pricingRulesCreated PricingRule[] @relation("PricingRuleCreatedBy")
     // adminProfile    AdminProfile?
 
     @@index([role, status])
