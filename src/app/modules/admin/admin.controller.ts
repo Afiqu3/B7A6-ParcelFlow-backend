@@ -1,101 +1,108 @@
 import type { Request, Response } from "express";
 import httpStatus from "http-status";
+import config from "../../config";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { AdminService } from "./admin.service";
-import config from "../../config";
 
 const createAdmin = catchAsync(async (req: Request, res: Response) => {
-	const payload = req.body;
-	await AdminService.createAdmin(payload);
+    const payload = req.body;
+    await AdminService.createAdmin(payload);
 
-	sendResponse(res, {
-		statusCode: httpStatus.CREATED,
-		success: true,
-		message: "Admin created successfully",
-		data: null,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "Admin created successfully",
+        data: null,
+    });
 });
 
 const createSuperAdmin = catchAsync(async (req: Request, res: Response) => {
-	const payload = req.body;
-	await AdminService.createSuperAdmin(payload);
+    const payload = req.body;
+    await AdminService.createSuperAdmin(payload);
 
-	sendResponse(res, {
-		statusCode: httpStatus.CREATED,
-		success: true,
-		message: "Super Admin created successfully",
-		data: null,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "Super Admin created successfully",
+        data: null,
+    });
 });
 
 const getAllAdmin = catchAsync(async (req: Request, res: Response) => {
-	const { data, meta } = await AdminService.getAllAdmin(req.query);
+    const { data, meta } = await AdminService.getAllAdmin(
+        req.query,
+        req.user?.userId as string,
+    );
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Admins Retrieved Successfully",
-		data: data,
-		meta: meta,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Admins Retrieved Successfully",
+        data: data,
+        meta: meta,
+    });
 });
 
 const getAllSuperAdmin = catchAsync(async (req: Request, res: Response) => {
-	const { data, meta } = await AdminService.getAllSuperAdmin(req.query);
+    const { data, meta } = await AdminService.getAllSuperAdmin(
+        req.query,
+        req.user?.userId as string,
+    );
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Super admins Retrieved Successfully",
-		data: data,
-		meta: meta,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Super admins Retrieved Successfully",
+        data: data,
+        meta: meta,
+    });
 });
 
 const updateAdmin = catchAsync(async (req: Request, res: Response) => {
-	const { updatedAdmin, accessToken, refreshToken } =
-		await AdminService.updateAdmin(req.body, req.user?.userId as string);
+    const { updatedAdmin, accessToken, refreshToken } =
+        await AdminService.updateAdmin(req.body, req.user?.userId as string);
 
-	res.cookie("accessToken", accessToken, {
-		httpOnly: true,
-		secure: config.node_env === "development" ? false : true,
-		sameSite: config.node_env === "development" ? "lax" : "none",
-		maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
-	});
-	res.cookie("refreshToken", refreshToken, {
-		httpOnly: true,
-		secure: config.node_env === "development" ? false : true,
-		sameSite: config.node_env === "development" ? "lax" : "none",
-		maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-	});
+    res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: config.node_env === "development" ? false : true,
+        sameSite: config.node_env === "development" ? "lax" : "none",
+        maxAge: 1000 * 60 * 60 * 24, // 24 hour or 1 day
+    });
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.node_env === "development" ? false : true,
+        sameSite: config.node_env === "development" ? "lax" : "none",
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    });
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Profile updated Successfully",
-		data: { accessToken, refreshToken, updatedAdmin },
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Profile updated Successfully",
+        data: { accessToken, refreshToken, updatedAdmin },
+    });
 });
 
 const updateAdminStatus = catchAsync(async (req: Request, res: Response) => {
-	const data = await AdminService.updateAdminStatus(
-		req.params.userId as string,
-	);
+    const data = await AdminService.updateAdminStatus(
+        req.params.userId as string,
+		req.user?.userId as string,
+    );
 
-	sendResponse(res, {
-		statusCode: httpStatus.OK,
-		success: true,
-		message: "Admin status updated Successfully",
-		data: data,
-	});
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Admin status updated Successfully",
+        data: data,
+    });
 });
 
 export const AdminController = {
-	createAdmin,
-	createSuperAdmin,
-	getAllAdmin,
-	getAllSuperAdmin,
-	updateAdmin,
-	updateAdminStatus,
+    createAdmin,
+    createSuperAdmin,
+    getAllAdmin,
+    getAllSuperAdmin,
+    updateAdmin,
+    updateAdminStatus,
 };
