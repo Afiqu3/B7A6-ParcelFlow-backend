@@ -321,8 +321,7 @@ const getAllAvailableRider = async (query: IQuery) => {
     if (query.searchTerm) {
         andConditions.push({
             OR: [
-                { name: { contains: query.searchTerm, mode: "insensitive" } },
-                { email: { contains: query.searchTerm, mode: "insensitive" } },
+                { address: { contains: query.searchTerm, mode: "insensitive" } },
             ],
         });
     }

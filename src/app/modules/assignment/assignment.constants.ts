@@ -17,7 +17,7 @@ export const ACTIVE_ASSIGNMENT_STATUSES: AssignmentStatus[] = [
 // DELIVERY is allowed from AT_HUB (first attempt) or DELIVERY_FAILED (re-attempt).
 export const ASSIGNABLE_PARCEL_STATUS: Record<AssignmentLeg, ParcelStatus[]> = {
 	PICKUP: [ParcelStatus.CREATED],
-	DELIVERY: [ParcelStatus.AT_HUB, ParcelStatus.DELIVERY_FAILED],
+	DELIVERY: [ParcelStatus.AT_HUB, ParcelStatus.DELIVERY_FAILED, ParcelStatus.IN_TRANSIT],
 };
 
 // Legal transitions for an assignment's own status. Rider drives

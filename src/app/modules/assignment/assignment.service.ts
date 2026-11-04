@@ -236,7 +236,8 @@ const startAssignment = async (assignmentId: string, userId: string) => {
 
         if (
             assignment.leg === "DELIVERY" &&
-            assignment.parcel.status === ParcelStatus.AT_HUB
+           ( assignment.parcel.status === ParcelStatus.AT_HUB ||
+            assignment.parcel.status === ParcelStatus.IN_TRANSIT)
         ) {
             await tx.parcel.update({
                 where: { id: assignment.parcelId },
