@@ -20,6 +20,7 @@ model User {
     riderProfile    RiderProfile?
     assignmentsMade Assignment[]     @relation("AssignedByAdmin")
     pricingRulesCreated PricingRule[] @relation("PricingRuleCreatedBy")
+    pricingRulesUpdated PricingRule[] @relation("PricingRuleUpdatedBy")
     // adminProfile    AdminProfile?
 
     @@index([role, status])

@@ -22,6 +22,8 @@ model PricingRule {
 
     createdById String
     createdBy   User   @relation("PricingRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+    updatedById String?
+    updatedBy   User?  @relation("PricingRuleUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
     @@unique([zoneType, parcelCategory])
     @@index([zoneType, parcelCategory, isActive])

@@ -237,7 +237,8 @@ All fields optional.
 | Method | Path | Access | Description |
 | --- | --- | --- | --- |
 | POST | `/` | 👑 Admin | Create a pricing rule |
-| GET | `/` | 👑 Admin | List all pricing rules |
+| GET | `/` | 🌐 Public | List pricing rules |
+| GET | `/admin` | 👑 Admin | List pricing rules with creator and updater names |
 | PATCH | `/:ruleId` | 👑 Admin | Update a pricing rule |
 
 A rule is unique per (`zoneType`, `parcelCategory`).
@@ -263,7 +264,7 @@ A rule is unique per (`zoneType`, `parcelCategory`).
 - Required: `name`, `zoneType`, `parcelCategory`, `baseCharge`, `perKgCharge`. Others optional.
 - For `DOCUMENT` rules: `perKgCharge`, `codFeePercent`, and a non-default `baseWeightKg` are rejected (documents are flat-rate, no COD).
 
-**PATCH `/:ruleId`** — any subset of the create fields.
+**PATCH `/:ruleId`** — any subset of the create fields. The response includes `updatedById`, set automatically to the authenticated admin's user ID.
 
 ---
 

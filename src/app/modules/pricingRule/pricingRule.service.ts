@@ -61,6 +61,7 @@ const createPricingRule = async (
 const updatePricingRule = async (
 	payload: IUpdatePricingRulePayload,
 	ruleId: string,
+	updatedById: string,
 ) => {
 	const existingPricingRule = await prisma.pricingRule.findUnique({
 		where: {
@@ -115,6 +116,7 @@ const updatePricingRule = async (
 		},
 		data: {
 			...payload,
+			updatedById,
 		},
 	});
 	return updatedPricingRule;
@@ -125,8 +127,27 @@ const getAllPricingRules = async () => {
 	return pricingRules;
 };
 
+const getAllPricingRulesForAdmin = async () => {
+	const pricingRules = await prisma.pricingRule.findMany({
+		include: {
+			createdBy: {
+				select: {
+					name: true,
+				},
+			},
+			updatedBy: {
+				select: {
+					name: true,
+				},
+			},
+		},
+	});
+	return pricingRules;
+};
+
 export const PricingRuleService = {
 	createPricingRule,
 	updatePricingRule,
 	getAllPricingRules,
+	getAllPricingRulesForAdmin,
 };

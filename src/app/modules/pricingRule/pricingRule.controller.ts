@@ -29,11 +29,20 @@ const createPricingRule = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updatePricingRule = catchAsync(async (req: Request, res: Response) => {
+    const updatedById = req.user?.userId;
+    if (!updatedById) {
+        throw new AppError(
+            httpStatus.UNAUTHORIZED,
+            "Authentication is required",
+        );
+    }
+
     const { ruleId } = req.params;
     const payload = req.body;
     const updatedPricingRule = await PricingRuleService.updatePricingRule(
         payload,
         ruleId as string,
+        updatedById,
     );
 
     sendResponse(res, {
@@ -55,8 +64,23 @@ const getAllPricingRules = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getAllPricingRulesForAdmin = catchAsync(
+    async (req: Request, res: Response) => {
+        const pricingRules =
+            await PricingRuleService.getAllPricingRulesForAdmin();
+
+        sendResponse(res, {
+            statusCode: httpStatus.OK,
+            success: true,
+            message: "Pricing rules retrieved successfully",
+            data: pricingRules,
+        });
+    },
+);
+
 export const PricingRuleController = {
     createPricingRule,
     updatePricingRule,
     getAllPricingRules,
+    getAllPricingRulesForAdmin,
 };

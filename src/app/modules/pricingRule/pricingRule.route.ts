@@ -19,6 +19,12 @@ router.get(
 	PricingRuleController.getAllPricingRules,
 );
 
+router.get(
+	"/admin",
+	auth(Role.ADMIN, Role.SUPER_ADMIN),
+	PricingRuleController.getAllPricingRulesForAdmin,
+);
+
 router.patch(
 	"/:ruleId",
 	auth(Role.ADMIN, Role.SUPER_ADMIN),
