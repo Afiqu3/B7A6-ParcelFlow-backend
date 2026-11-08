@@ -3,7 +3,6 @@ import type {
 	ParcelCategory,
 	PaymentType,
 	PickupMode,
-	ZoneType,
 } from "../../../generated/prisma/enums";
 
 export interface ICreateParcelPayload {
@@ -11,8 +10,7 @@ export interface ICreateParcelPayload {
 	pickupContactName: string;
 	pickupContactPhone: string;
 	pickupAddressLine: string;
-	pickupDistrict: string;
-	pickupCity: string;
+	pickupCityId: string;
 	pickupMode?: PickupMode; // defaults to RIDER_PICKUP
 	note?: string;
 
@@ -21,11 +19,7 @@ export interface ICreateParcelPayload {
 	recipientPhone: string;
 	recipientEmail: string;
 	deliveryAddressLine: string;
-	deliveryDistrict: string;
-	deliveryCity: string;
-	// Zone that pricing is resolved against. Supplied by the client for now;
-	// can later be derived server-side from delivery district/city.
-	deliveryZoneType: ZoneType;
+	deliveryCityId: string;
 
 	// ── Shipment / item ───────────────────────────────────────
 	parcelCategory: ParcelCategory;

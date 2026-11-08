@@ -16,11 +16,17 @@ model User {
     createdAt          DateTime      @default(now())
     updatedAt          DateTime      @updatedAt
 
-    merchantProfile MerchantProfile?
-    riderProfile    RiderProfile?
-    assignmentsMade Assignment[]     @relation("AssignedByAdmin")
-    pricingRulesCreated PricingRule[] @relation("PricingRuleCreatedBy")
-    pricingRulesUpdated PricingRule[] @relation("PricingRuleUpdatedBy")
+    merchantProfile     MerchantProfile?
+    riderProfile        RiderProfile?
+    assignmentsMade     Assignment[]     @relation("AssignedByAdmin")
+    pricingRulesCreated PricingRule[]    @relation("PricingRuleCreatedBy")
+    pricingRulesUpdated PricingRule[]    @relation("PricingRuleUpdatedBy")
+    divisionsCreated    Division[]       @relation("DivisionCreatedBy")
+    divisionsUpdated    Division[]       @relation("DivisionUpdatedBy")
+    districtsCreated    District[]       @relation("DistrictCreatedBy")
+    districtsUpdated    District[]       @relation("DistrictUpdatedBy")
+    citiesCreated       City[]           @relation("CityCreatedBy")
+    citiesUpdated       City[]           @relation("CityUpdatedBy")
     // adminProfile    AdminProfile?
 
     @@index([role, status])

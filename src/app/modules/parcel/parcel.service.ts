@@ -6,6 +6,7 @@ import {
     PaymentType,
     PickupMode,
     TransactionStatus,
+    ZoneType,
 } from "../../../generated/prisma/enums";
 import type { ParcelWhereInput } from "../../../generated/prisma/models";
 import config from "../../config";
@@ -28,6 +29,67 @@ const money = (value: unknown, currency = "BDT"): string =>
         ? "N/A"
         : `${currency} ${Number(value).toFixed(2)}`;
 
+export async function getZoneType(
+    pickupCityId: string,
+    deliveryCityId: string,
+): Promise<ZoneType> {
+    const ids = [...new Set([pickupCityId, deliveryCityId])];
+
+    const cities = await prisma.city.findMany({
+        where: { id: { in: ids } },
+        select: {
+            id: true,
+            name: true,
+            isActive: true,
+            districtId: true,
+            district: {
+                select: {
+                    isActive: true,
+                    divisionId: true,
+                    division: { select: { isActive: true } },
+                },
+            },
+        },
+    });
+
+    const pickup = cities.find((c) => c.id === pickupCityId);
+    const delivery = cities.find((c) => c.id === deliveryCityId);
+
+    if (!pickup) {
+        throw new AppError(httpStatus.NOT_FOUND, "Pickup city not found");
+    }
+    if (!delivery) {
+        throw new AppError(httpStatus.NOT_FOUND, "Delivery city not found");
+    }
+
+    // Every city must be active, along with its district and division
+    for (const [label, c] of [
+        ["Pickup", pickup],
+        ["Delivery", delivery],
+    ] as const) {
+        if (
+            !c.isActive ||
+            !c.district.isActive ||
+            !c.district.division.isActive
+        ) {
+            throw new AppError(
+                httpStatus.BAD_REQUEST,
+                `${label} location (${c.name}) is not currently served`,
+            );
+        }
+    }
+
+    if (pickup.id === delivery.id) {
+        return ZoneType.INSIDE_CITY;
+    }
+
+    if (pickup.district.divisionId === delivery.district.divisionId) {
+        return ZoneType.SUB_CITY;
+    }
+
+    return ZoneType.OUTSIDE_CITY;
+}
+
 const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
     // ── 1. Resolve and validate the authenticated merchant ────
     const user = await prisma.user.findUnique({
@@ -35,7 +97,7 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
         include: { merchantProfile: true },
     });
 
-    if (!user || !user.merchantProfile) {
+    if (!user?.merchantProfile) {
         throw new AppError(httpStatus.NOT_FOUND, "Merchant profile not found");
     }
 
@@ -53,10 +115,15 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
         );
     }
 
+    const deliveryZoneType = await getZoneType(
+        payload.pickupCityId,
+        payload.deliveryCityId,
+    );
+
     // ── 2. Resolve the active pricing rule (zone + category) ──
     const pricingRule = await prisma.pricingRule.findFirst({
         where: {
-            zoneType: payload.deliveryZoneType,
+            zoneType: deliveryZoneType,
             parcelCategory: payload.parcelCategory,
             isActive: true,
         },
@@ -65,7 +132,7 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
     if (!pricingRule) {
         throw new AppError(
             httpStatus.NOT_FOUND,
-            `No active pricing rule found for ${payload.parcelCategory} parcels in zone ${payload.deliveryZoneType}`,
+            `No active pricing rule found for ${payload.parcelCategory} parcels in zone ${deliveryZoneType}`,
         );
     }
 
@@ -91,7 +158,7 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
             pickupMode,
             paymentType: payload.paymentType,
             codAmount: payload.codAmount,
-            deliveryZoneType: payload.deliveryZoneType,
+            deliveryZoneType,
         },
     );
 
@@ -111,8 +178,7 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
                 pickupContactPhone: payload.pickupContactPhone,
                 pickupAddressLine: payload.pickupAddressLine,
                 pickupMode,
-                pickupDistrict: payload.pickupDistrict,
-                pickupCity: payload.pickupCity,
+                pickupCityId: payload.pickupCityId,
                 note: payload.note,
 
                 // Recipient / delivery
@@ -120,9 +186,8 @@ const createParcel = async (payload: ICreateParcelPayload, userId: string) => {
                 recipientPhone: payload.recipientPhone,
                 recipientEmail: payload.recipientEmail,
                 deliveryAddressLine: payload.deliveryAddressLine,
-                deliveryDistrict: payload.deliveryDistrict,
-                deliveryCity: payload.deliveryCity,
-                deliveryZoneType: payload.deliveryZoneType,
+                deliveryCityId: payload.deliveryCityId,
+                deliveryZoneType,
 
                 // Shipment / item
                 parcelCategory: payload.parcelCategory,
@@ -622,6 +687,26 @@ const getMyParcels = async (query: IQuery, userId: string) => {
         orderBy: { [sortBy]: sortOrder },
         include: {
             transaction: true,
+            pickupCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
+            deliveryCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
         },
     });
 
@@ -686,6 +771,26 @@ const listParcels = async (query: IQuery) => {
         orderBy: { [sortBy]: sortOrder },
         include: {
             transaction: true,
+            pickupCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
+            deliveryCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
         },
     });
 
@@ -720,6 +825,26 @@ const getSingleParcelAsAdmin = async (parcelId: string) => {
         where: { id: parcelId },
         include: {
             transaction: true,
+            pickupCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
+            deliveryCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
             merchant: {
                 select: {
                     id: true,
@@ -763,6 +888,26 @@ const getSingleParcelAsMerchant = async (parcelId: string, userId: string) => {
         where: { id: parcelId },
         include: {
             transaction: true,
+            pickupCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
+            deliveryCity: {
+                select: {
+                    name: true,
+                    district: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
         },
     });
 
@@ -850,7 +995,16 @@ const deleteParcel = async (parcelId: string, userId: string) => {
 const downloadParcelInvoice = async (parcelId: string, userId: string) => {
     const parcel = await prisma.parcel.findUnique({
         where: { id: parcelId },
-        include: { merchant: true, transaction: true },
+        include: {
+            merchant: true,
+            transaction: true,
+            pickupCity: {
+                include: { district: true },
+            },
+            deliveryCity: {
+                include: { district: true },
+            },
+        },
     });
 
     if (!parcel) {
@@ -911,7 +1065,9 @@ const downloadParcelInvoice = async (parcelId: string, userId: string) => {
         `Contact: ${parcel.pickupContactName} (${parcel.pickupContactPhone})`,
     );
     doc.text(`Address: ${parcel.pickupAddressLine}`);
-    doc.text(`District / City: ${parcel.pickupDistrict}, ${parcel.pickupCity}`);
+    doc.text(
+        `District / City: ${parcel.pickupCity.district.name}, ${parcel.pickupCity.name}`,
+    );
     doc.text(`Pickup Mode: ${parcel.pickupMode}`);
     doc.moveDown();
 
@@ -922,7 +1078,7 @@ const downloadParcelInvoice = async (parcelId: string, userId: string) => {
     doc.text(`Email: ${parcel.recipientEmail}`);
     doc.text(`Address: ${parcel.deliveryAddressLine}`);
     doc.text(
-        `District / City: ${parcel.deliveryDistrict}, ${parcel.deliveryCity}`,
+        `District / City: ${parcel.deliveryCity.district.name}, ${parcel.deliveryCity.name}`,
     );
     doc.text(`Zone: ${parcel.deliveryZoneType}`);
     doc.text(`Delivery Type: ${parcel.deliveryType}`);

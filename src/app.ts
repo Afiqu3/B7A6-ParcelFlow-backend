@@ -19,6 +19,7 @@ import { RiderRoutes } from "./app/modules/rider/rider.route";
 import { StatsRoutes } from "./app/modules/stats/stats.route";
 import { TransactionRoutes } from "./app/modules/transaction/transaction.route";
 import { UserRoutes } from "./app/modules/user/user.route";
+import { LocationRoutes } from "./app/modules/location/location.route";
 
 const app: Application = express();
 
@@ -45,6 +46,7 @@ app.use("/api/v1/rule", PricingRuleRoutes);
 app.use("/api/v1/parcel", ParcelRoutes);
 app.use("/api/v1/assignment", AssignmentRoutes);
 app.use("/api/v1/transaction", TransactionRoutes);
+app.use("/api/v1/locations", LocationRoutes);
 app.use("/api/v1/stats", StatsRoutes);
 
 // Basic route

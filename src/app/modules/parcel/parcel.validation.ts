@@ -4,7 +4,6 @@ import {
 	ParcelCategory,
 	PaymentType,
 	PickupMode,
-	ZoneType,
 } from "../../../generated/prisma/enums";
 
 const requiredString = (label: string) =>
@@ -19,8 +18,7 @@ const CreateParcelZodValidationSchema = z
 		pickupContactName: requiredString("Pickup contact name").max(100),
 		pickupContactPhone: requiredString("Pickup contact phone").max(20),
 		pickupAddressLine: requiredString("Pickup address").max(255),
-		pickupDistrict: requiredString("Pickup district").max(100),
-		pickupCity: requiredString("Pickup city").max(100),
+		pickupCityId: z.uuid("Pickup city ID must be a valid UUID"),
 		pickupMode: z.enum(PickupMode).default(PickupMode.RIDER_PICKUP),
 		note: z.string().trim().max(500).optional(),
 
@@ -29,11 +27,7 @@ const CreateParcelZodValidationSchema = z
 		recipientPhone: requiredString("Recipient phone").max(20),
 		recipientEmail: z.email("Invalid recipient email").trim().toLowerCase(),
 		deliveryAddressLine: requiredString("Delivery address").max(255),
-		deliveryDistrict: requiredString("Delivery district").max(100),
-		deliveryCity: requiredString("Delivery city").max(100),
-		deliveryZoneType: z.enum(ZoneType, {
-			error: "Delivery zone type is required",
-		}),
+		deliveryCityId: z.uuid("Delivery city ID must be a valid UUID"),
 
 		// ── Shipment / item ───────────────────────────────────────
 		parcelCategory: z.enum(ParcelCategory, {

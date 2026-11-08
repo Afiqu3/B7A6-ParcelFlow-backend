@@ -400,13 +400,25 @@ const getMyAssignments = async (query: IQuery, userId: string) => {
                     pickupContactName: true,
                     pickupContactPhone: true,
                     pickupAddressLine: true,
-                    pickupDistrict: true,
-                    pickupCity: true,
+                    pickupCity: {
+                        select: {
+                            name: true,
+                            district: {
+                                select: { name: true },
+                            },
+                        },
+                    },
                     recipientName: true,
                     recipientPhone: true,
                     deliveryAddressLine: true,
-                    deliveryDistrict: true,
-                    deliveryCity: true,
+                    deliveryCity: {
+                        select: {
+                            name: true,
+                            district: {
+                                select: { name: true },
+                            },
+                        },
+                    },
                     paymentType: true,
                     codAmount: true,
                 },
@@ -419,7 +431,16 @@ const getMyAssignments = async (query: IQuery, userId: string) => {
     });
 
     return {
-        data: assignments,
+        data: assignments.map(({ parcel, ...assignment }) => ({
+            ...assignment,
+            parcel: {
+                ...parcel,
+                pickupDistrict: parcel.pickupCity.district.name,
+                pickupCity: parcel.pickupCity.name,
+                deliveryDistrict: parcel.deliveryCity.district.name,
+                deliveryCity: parcel.deliveryCity.name,
+            },
+        })),
         meta: {
             page,
             limit,

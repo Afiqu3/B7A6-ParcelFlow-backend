@@ -1,0 +1,22 @@
+model City {
+    id        String   @id @default(uuid())
+    name      String
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    districtId String
+    district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+    createdById String?
+    createdBy   User?   @relation("CityCreatedBy", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+    updatedById String?
+    updatedBy   User?   @relation("CityUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+    pickupParcels   Parcel[] @relation("PickupCity")
+    deliveryParcels Parcel[] @relation("DeliveryCity")
+
+    @@unique([districtId, name])
+    @@map("cities")
+}

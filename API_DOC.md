@@ -179,6 +179,21 @@ All fields optional.
 
 ---
 
+## Locations — `/api/v1/locations`
+
+All endpoints require authentication and return only active locations. Use them to populate cascading dropdowns: load divisions first, then districts for the selected division, then cities for the selected district. District and city results are filtered out when their parent location is inactive.
+
+| Method | Path | Query | Returns |
+| --- | --- | --- | --- |
+| GET | `/divisions` | None | `id`, `name` |
+| GET | `/districts` | `divisionId` (UUID), optional `page`, `limit` | Paginated `id`, `name`, `divisionId` |
+| GET | `/cities` | `districtId` (UUID), optional `page`, `limit` | Paginated `id`, `name`, `districtId` |
+
+Example: `GET /api/v1/locations/districts?divisionId=<division UUID>`
+Pagination defaults to `page=1` and `limit=10`; responses include `meta` with `page`, `limit`, `total`, and `totalPages`.
+
+---
+
 ## 5. Rider — `/api/v1/rider`
 
 | Method | Path | Access | Description |
@@ -292,8 +307,7 @@ A rule is unique per (`zoneType`, `parcelCategory`).
   "pickupContactName": "Acme Warehouse",
   "pickupContactPhone": "01700000000",
   "pickupAddressLine": "Plot 5, Tejgaon",
-  "pickupDistrict": "Dhaka",
-  "pickupCity": "Dhaka",
+  "pickupCityId": "<pickup city UUID>",
   "pickupMode": "RIDER_PICKUP",
   "note": "Call before pickup",
 
@@ -301,9 +315,7 @@ A rule is unique per (`zoneType`, `parcelCategory`).
   "recipientPhone": "01900000000",
   "recipientEmail": "john@example.com",
   "deliveryAddressLine": "House 10, Gulshan",
-  "deliveryDistrict": "Dhaka",
-  "deliveryCity": "Dhaka",
-  "deliveryZoneType": "INSIDE_CITY",
+  "deliveryCityId": "<delivery city UUID>",
 
   "parcelCategory": "PARCEL",
   "weightKg": 2.5,
@@ -322,7 +334,7 @@ Field reference:
 | Field | Values / notes |
 | --- | --- |
 | `pickupMode` | `RIDER_PICKUP` (default) \| `MERCHANT_DROP` |
-| `deliveryZoneType` | `INSIDE_CITY` \| `SUB_CITY` \| `OUTSIDE_CITY` |
+| `pickupCityId`, `deliveryCityId` | UUIDs of active cities; the server derives `deliveryZoneType` (`INSIDE_CITY` for the same city, `SUB_CITY` for different cities in the same division, otherwise `OUTSIDE_CITY`) |
 | `parcelCategory` | `DOCUMENT` \| `PARCEL` |
 | `deliveryType` | `REGULAR` (default) \| `EXPRESS` \| `SAME_DAY` |
 | `paymentType` | `PREPAID` \| `COD` |

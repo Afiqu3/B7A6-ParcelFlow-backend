@@ -6,16 +6,18 @@ model Parcel {
     pickupContactPhone String
     pickupAddressLine  String
     pickupMode         PickupMode @default(RIDER_PICKUP)
-    pickupDistrict     String
-    pickupCity         String
     note               String?
+
+    pickupCityId   String
+    pickupCity City   @relation("PickupCity", fields: [pickupCityId], references: [id], onDelete: Restrict)
+
+    deliveryCityId   String
+    deliveryCity City   @relation("DeliveryCity", fields: [deliveryCityId], references: [id], onDelete: Restrict)
 
     recipientName       String
     recipientPhone      String
     recipientEmail      String
     deliveryAddressLine String
-    deliveryDistrict    String
-    deliveryCity        String
 
     parcelCategory  ParcelCategory
     weightKg        Decimal        @db.Decimal(10, 2)
@@ -60,6 +62,7 @@ model Parcel {
 
     @@index([merchantId, status])
     @@index([status])
-    @@index([deliveryDistrict])
+    @@index([pickupCityId])
+    @@index([deliveryCityId])
     @@map("parcels")
 }
